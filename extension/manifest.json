@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Greenlens",
+  "version": "0.0.1",
+  "description": "While you shop, see what every public rating source actually says — and decide for yourself.",
+  "minimum_chrome_version": "114",
+  "action": {
+    "default_title": "Greenlens",
+    "default_popup": "popup/index.html"
+  },
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": true
+  },
+  "background": {
+    "service_worker": "background/sw.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.amazon.com/*",
+        "https://smile.amazon.com/*",
+        "https://www.facebook.com/marketplace/*"
+      ],
+      "js": ["content/index.ts"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": [
+    "https://www.amazon.com/*",
+    "https://smile.amazon.com/*",
+    "https://www.facebook.com/marketplace/*"
+  ]
+}

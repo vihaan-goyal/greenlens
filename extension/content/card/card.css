@@ -1,0 +1,142 @@
+/* Scoped to the shadow root — Amazon's CSS cannot reach in, ours cannot leak out. */
+
+:host, .gl-card {
+  all: initial;
+  font-family: 'Manrope', ui-rounded, system-ui, -apple-system, sans-serif;
+  color: var(--ink);
+}
+
+.gl-card * { box-sizing: border-box; }
+
+.gl-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.gl-trigger:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
+.gl-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Idle state — just Sonion in a tighter circle, no text. Animations land here. */
+.gl-trigger-idle {
+  padding: 4px;
+  gap: 0;
+  cursor: default;
+}
+
+.gl-trigger-text {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1;
+}
+.gl-trigger-score {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.gl-trigger-band {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.gl-panel {
+  margin-top: 10px;
+  width: 320px;
+  padding: 18px 18px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lift);
+}
+.gl-panel-head { margin-bottom: 10px; }
+.gl-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 4px;
+}
+.gl-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0;
+  color: var(--ink);
+}
+.gl-brand {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin: 2px 0 0;
+}
+
+.gl-sonion-line {
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--ink);
+  margin: 12px 0;
+}
+
+.gl-range {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 10px;
+}
+.gl-range-num {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.gl-pillars {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 0 0 12px;
+  padding: 12px;
+  background: var(--card-2);
+  border-radius: 12px;
+}
+.gl-pillar {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+}
+.gl-pillar-label { color: var(--ink-2); }
+.gl-pillar-num {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--ink);
+}
+.gl-disagree {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--verdict-poor);
+}
+
+.gl-foot {
+  font-size: 11px;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gl-trigger { transition: none; }
+}

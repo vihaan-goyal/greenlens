@@ -81,6 +81,10 @@ const BRANDS: Brand[] = [
   { id: 'brand-lumen', name: 'Lumen Botanicals', aliases: ['Lumen', 'lumen botanicals'] },
   { id: 'brand-vela', name: 'Vela Skin', aliases: ['Vela', 'vela skin co.'] },
   { id: 'brand-fern', name: 'Fern & Field', aliases: ['Fern', 'fern field', 'fern and field'] },
+  // Real brand kept as seed data so the extension demo can match against a
+  // page someone actually has open. Ratings below are placeholders — real
+  // ingestion (EWG/Yuka/INCI/etc.) lands in Phase 5.
+  { id: 'brand-cerave', name: 'CeraVe', aliases: ['Cera Ve', 'cerave'] },
 ];
 
 // ─── Products ───────────────────────────────────────────────────────────────
@@ -169,6 +173,39 @@ const PRODUCTS: Product[] = [
       'Tocopherol',
     ],
   },
+  // Real product, placeholder ratings — included as seed data so the extension
+  // demo can resolve a live Amazon CeraVe page through the real matcher.
+  {
+    id: 'prod-cerave-mc',
+    brandId: 'brand-cerave',
+    displayName: 'Moisturizing Cream',
+    category: 'moisturizer',
+    gtin: '301871239019',
+    sizeValue: 19,
+    sizeUnit: 'oz',
+    ingredients: [
+      'Purified Water',
+      'Glycerin',
+      'Cetearyl Alcohol',
+      'Caprylic/Capric Triglyceride',
+      'Cetyl Alcohol',
+      'Ceramide NP',
+      'Ceramide AP',
+      'Ceramide EOP',
+      'Carbomer',
+      'Dimethicone',
+      'Behentrimonium Methosulfate',
+      'Sodium Lauroyl Lactylate',
+      'Cholesterol',
+      'Phenoxyethanol',
+      'Disodium EDTA',
+      'Sodium Hyaluronate',
+      'Tocopherol',
+      'Phytosphingosine',
+      'Xanthan Gum',
+      'Ethylhexylglycerin',
+    ],
+  },
 ];
 
 // ─── Listings + Ratings ─────────────────────────────────────────────────────
@@ -223,6 +260,16 @@ const SEED: SeedRating[] = [
   { listingId: 'l-creamx-labor', productId: 'prod-cream-clean', sourceId: 'good-on-you', scoreRaw: 4 },
   // tradeoff: thinner feel proxy — Fern's labor is great but packaging is worse than Vela's
   { listingId: 'l-creamx-pkg', productId: 'prod-cream-clean', sourceId: 'how2recycle', scoreRaw: 58 },
+
+  // ── CeraVe Moisturizing Cream (placeholder ratings) ─────────────────────
+  // Baked in so the extension demo lands on a real product. Numbers are
+  // illustrative and will be replaced by real ingestion in Phase 5.
+  { listingId: 'l-cerave-ewg', productId: 'prod-cerave-mc', sourceId: 'ewg', scoreRaw: 3, scoreLabel: 'Low concern' },
+  { listingId: 'l-cerave-yuka', productId: 'prod-cerave-mc', sourceId: 'yuka', scoreRaw: 78, scoreLabel: 'Good' },
+  { listingId: 'l-cerave-inci', productId: 'prod-cerave-mc', sourceId: 'inci-beauty', scoreRaw: 14, scoreLabel: 'Satisfactory' },
+  { listingId: 'l-cerave-eco', productId: 'prod-cerave-mc', sourceId: 'obf-eco', scoreRaw: 52 },
+  { listingId: 'l-cerave-labor', productId: 'prod-cerave-mc', sourceId: 'good-on-you', scoreRaw: 2 },
+  { listingId: 'l-cerave-pkg', productId: 'prod-cerave-mc', sourceId: 'how2recycle', scoreRaw: 48 },
 ];
 
 const LISTINGS: Listing[] = SEED.map((s) => {
