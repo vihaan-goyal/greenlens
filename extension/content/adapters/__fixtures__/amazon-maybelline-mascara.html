@@ -1,0 +1,60 @@
+<!--
+  Trimmed Amazon snapshot — makeup category. Two reasons this case matters:
+    1. Ingredients live in a <ul> inside an A+ content block (very common on
+       makeup), which the previous textContent-only parser collapsed into a
+       single 250+ char string.
+    2. UPC is in `#productDetails_techSpec_section_1` rather than the bullet
+       list — same field, different selector path.
+
+  Source pattern: amazon.com/dp/B07PXGQC1Q (Maybelline Sky High Mascara).
+  Brand byline is "Visit the X Store" — the same shape we exercise in the
+  CeraVe fixture, kept here so this fixture stays self-contained.
+-->
+<!doctype html>
+<html>
+  <head><title>Amazon.com: Maybelline Sky High Mascara</title></head>
+  <body>
+    <div id="wayfinding-breadcrumbs_feature_div">
+      <ul>
+        <li><a href="/b/?node=3760911">Beauty &amp; Personal Care</a></li>
+        <li><a href="/b/?node=11055981">Makeup</a></li>
+        <li><a href="/b/?node=11058281">Eyes</a></li>
+        <li><a href="/b/?node=11058291">Mascara</a></li>
+      </ul>
+    </div>
+
+    <div id="centerCol">
+      <h1 id="title">
+        <span id="productTitle">
+          Maybelline Lash Sensational Sky High Mascara, Volumizing, Lengthening,
+          Defining, Curling, Multiplying, Buildable Formula, Very Black, 1 Count
+        </span>
+      </h1>
+      <a id="bylineInfo" href="/stores/Maybelline">Visit the Maybelline Store</a>
+    </div>
+
+    <div id="aplus" class="aplus-v2">
+      <h3>Ingredients</h3>
+      <ul>
+        <li>Aqua / Water / Eau</li>
+        <li>Acacia Senegal Gum</li>
+        <li>Cera Alba / Beeswax / Cire d'Abeille</li>
+        <li>Caprylic/Capric Triglyceride</li>
+        <li>Stearic Acid</li>
+        <li>Palmitic Acid</li>
+        <li>Glyceryl Stearate</li>
+        <li>Iron Oxides (CI 77499)</li>
+        <li>Phenoxyethanol</li>
+        <li>Tocopherol</li>
+      </ul>
+    </div>
+
+    <table id="productDetails_techSpec_section_1">
+      <tbody>
+        <tr><th>UPC</th><td>041554577778</td></tr>
+        <tr><th>Item model number</th><td>SKYHIGH-001</td></tr>
+        <tr><th>Manufacturer</th><td>Maybelline</td></tr>
+      </tbody>
+    </table>
+  </body>
+</html>

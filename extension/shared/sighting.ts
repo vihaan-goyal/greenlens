@@ -9,7 +9,7 @@
  */
 export interface RawProductSighting {
   /** Which adapter produced this — used for telemetry + per-site bugfixes. */
-  source: 'amazon' | 'fb-marketplace';
+  source: 'amazon';
   /** Page URL at extraction time. Authoritative for de-dup. */
   url: string;
   rawName: string;

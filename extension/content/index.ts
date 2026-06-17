@@ -1,7 +1,7 @@
 import { pickAdapter } from './adapters';
 import { sendToBackground } from '../shared/messages';
-import type { BgToContent } from '../shared/messages';
-import { mountCard, mountIdle, mountUnknown, updateCard } from './card/mount';
+import type { BgToContent, PopupToContent } from '../shared/messages';
+import { getContentState, mountCard, mountIdle, mountUnknown, updateCard } from './card/mount';
 
 /**
  * Content-script entry. Runs in the page world at document_idle. Responsibilities:
@@ -76,9 +76,15 @@ window.addEventListener('greenlens:urlchange', () => {
   void run(location.href);
 });
 
-// SW-pushed weight changes.
-chrome.runtime.onMessage.addListener((raw) => {
-  handleReply(raw as BgToContent);
+// Listen for both SW broadcasts (BgToContent) and popup queries (PopupToContent).
+chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
+  const msg = raw as BgToContent | PopupToContent;
+  if (msg.kind === 'getCurrentState') {
+    sendResponse(getContentState());
+    return false; // synchronous reply
+  }
+  handleReply(msg as BgToContent);
+  return false;
 });
 
 void run(location.href);

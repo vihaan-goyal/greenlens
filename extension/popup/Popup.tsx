@@ -1,59 +1,311 @@
-import { useEffect, useState } from 'react';
-import { AXES, AXIS_LABEL, type Weights } from '@/lib/domain/types';
-import { defaultWeights } from '@/lib/domain/scoring';
+import { useEffect, useRef, useState } from 'react';
+import type { ContentState, ContentToPopup, VerdictPayload } from '../shared/messages';
+import { AXES, AXIS_LABEL, FUNDING_LABEL, type Pillars, type Weights } from '@/lib/domain/types';
+import { defaultWeights, overall, overallRange, topMarginalDriver } from '@/lib/domain/scoring';
+import { VERDICT_LABEL, VERDICT_VAR, verdictBand } from '@/lib/domain/verdict';
+import { Sonion, type SonionMood } from '@/components/Sonion';
 
 const WEIGHTS_KEY = 'greenlens.weights';
 
 /**
- * Toolbar popup. For the scaffold this is just the weight panel — the
- * "recent sightings" list and rater detail land in later passes.
+ * Toolbar popup. Two responsibilities, in priority order:
+ *   1. Show the rater-by-rater detail for whatever the active Amazon tab is
+ *      looking at. This is the thesis of Greenlens — every source named,
+ *      every funding model named, disagreement made visible.
+ *   2. Let the user adjust their per-axis weighting. The composite is
+ *      recomputed at render time and never persisted.
+ *
+ * The popup queries the active tab's content script for its current state
+ * (verdict / unknown / idle). MV3 service workers go to sleep so we don't
+ * cache there; the content script is the authoritative view.
  */
 export function Popup() {
+  const [tabState, setTabState] = useState<ContentState | null>(null);
   const [weights, setWeights] = useState<Weights>(defaultWeights);
+  const writeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Load persisted weights.
   useEffect(() => {
-    chrome.storage.sync.get([WEIGHTS_KEY], (s) => {
+    chrome.storage.local.get([WEIGHTS_KEY], (s) => {
       const v = s[WEIGHTS_KEY] as Partial<Weights> | undefined;
       if (v) setWeights({ ...defaultWeights(), ...v });
     });
+    return () => {
+      if (writeTimer.current) clearTimeout(writeTimer.current);
+    };
   }, []);
 
-  const update = (axis: keyof Weights, value: number) => {
+  // Ask the active tab what it's currently showing.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id) {
+        if (!cancelled) setTabState({ kind: 'idle' });
+        return;
+      }
+      try {
+        const reply = (await chrome.tabs.sendMessage(tab.id, {
+          kind: 'getCurrentState',
+        })) as ContentToPopup;
+        if (!cancelled) {
+          setTabState(reply.kind === 'none' ? { kind: 'idle' } : reply);
+        }
+      } catch {
+        // Active tab isn't ours — no content script to talk to.
+        if (!cancelled) setTabState({ kind: 'idle' });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const updateWeight = (axis: keyof Weights, value: number) => {
     const next: Weights = { ...weights, [axis]: Math.max(0, value) };
     setWeights(next);
-    chrome.storage.sync.set({ [WEIGHTS_KEY]: next });
+    if (writeTimer.current) clearTimeout(writeTimer.current);
+    writeTimer.current = setTimeout(() => {
+      chrome.storage.local.set({ [WEIGHTS_KEY]: next });
+    }, 150);
   };
 
+  const verdict = tabState?.kind === 'verdict' ? tabState.payload : null;
+  const mood = headerMood(verdict?.pillars, weights);
+
   return (
-    <main style={{ padding: 20 }}>
-      <p style={{ fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 4px' }}>
-        Your weighting
-      </p>
-      <h1 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 22, margin: '0 0 16px' }}>
-        How you want to score
-      </h1>
-      {AXES.map((axis) => (
-        <label key={axis} style={{ display: 'block', marginBottom: 14 }}>
-          <span style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--ink-2)' }}>
-            <span>{AXIS_LABEL[axis]}</span>
-            <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--ink)' }}>
-              {weights[axis].toFixed(1)}
+    <main>
+      <header className="gl-header">
+        <div>
+          <h1 className="gl-wordmark">Greenlens</h1>
+          <p className="gl-header-tag">For your weighting</p>
+        </div>
+        <Sonion mood={mood} size={42} idle />
+      </header>
+
+      {tabState === null && <section className="gl-section gl-blank" />}
+
+      {tabState?.kind === 'verdict' && (
+        <ProductPanel payload={tabState.payload} weights={weights} />
+      )}
+
+      {tabState?.kind === 'unknown' && <UnknownBlock rawName={tabState.rawName} />}
+
+      {tabState?.kind === 'idle' && <IdleBlock />}
+
+      <section className="gl-section">
+        <p className="gl-eyebrow">Your weighting</p>
+        {AXES.map((axis) => (
+          <label key={axis} className="gl-weight">
+            <span className="gl-weight-head">
+              <span>{AXIS_LABEL[axis]}</span>
+              <span className="gl-weight-value">{weights[axis].toFixed(1)}</span>
             </span>
-          </span>
-          <input
-            type="range"
-            min={0}
-            max={3}
-            step={0.1}
-            value={weights[axis]}
-            onChange={(e) => update(axis, Number(e.target.value))}
-            style={{ width: '100%' }}
-          />
-        </label>
-      ))}
-      <p style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 18 }}>
-        Composite scores are computed from these weights at read time — never stored.
-      </p>
+            <input
+              type="range"
+              min={0}
+              max={3}
+              step={0.1}
+              value={weights[axis]}
+              onChange={(e) => updateWeight(axis, Number(e.target.value))}
+            />
+          </label>
+        ))}
+        <p className="gl-foot">
+          The composite is computed from these weights at read time — never
+          stored, never blended behind your back.
+        </p>
+      </section>
     </main>
   );
+}
+
+// ─── product panel ─────────────────────────────────────────────────────────
+
+function ProductPanel({ payload, weights }: { payload: VerdictPayload; weights: Weights }) {
+  const o = overall(payload.pillars, weights);
+  const range = overallRange(payload.pillars, weights);
+  const band = verdictBand(o);
+  const color = band ? VERDICT_VAR[band] : 'var(--ink-3)';
+  const driver = topMarginalDriver(payload.pillars, weights);
+
+  return (
+    <section className="gl-section">
+      <p className="gl-eyebrow">Looking at</p>
+      <h2 className="gl-product-name">{payload.product.displayName}</h2>
+      <p className="gl-brand">{payload.brand.name}</p>
+
+      <div className="gl-ring-wrap">
+        <VerdictRing
+          mean={o ?? 0}
+          min={range?.min ?? 0}
+          max={range?.max ?? 0}
+          color={color}
+          label={band ? VERDICT_LABEL[band] : 'No data'}
+          available={o !== null}
+        />
+      </div>
+      {range && range.max - range.min > 0.5 && (
+        <p className="gl-ring-range">
+          rater range <b>{Math.round(range.min)}–{Math.round(range.max)}</b>
+        </p>
+      )}
+      {driver && (
+        <p className="gl-foot" style={{ textAlign: 'center', marginTop: 6 }}>
+          {driver.direction === 'lifts'
+            ? `${capitalize(AXIS_LABEL[driver.axis].toLowerCase())} is carrying your composite.`
+            : `${capitalize(AXIS_LABEL[driver.axis].toLowerCase())} is dragging your composite.`}
+        </p>
+      )}
+
+      {AXES.map((axis) => (
+        <PillarRow key={axis} pillars={payload.pillars} axis={axis} />
+      ))}
+    </section>
+  );
+}
+
+function PillarRow({ pillars, axis }: { pillars: Pillars; axis: keyof Pillars }) {
+  const p = pillars[axis];
+  const band = verdictBand(p.representative);
+  const color = band ? VERDICT_VAR[band] : 'var(--ink-3)';
+  const rep = p.representative;
+  const spread = p.spread;
+
+  return (
+    <div className="gl-pillar" style={{ color }}>
+      <div className="gl-pillar-head">
+        <span className="gl-pillar-label" style={{ color: 'var(--ink-2)' }}>
+          {AXIS_LABEL[axis]}
+          {p.disagreement && <span className="gl-disagree-pill">Raters split</span>}
+        </span>
+        <span className={`gl-pillar-rep${rep === null ? ' gl-pillar-rep--none' : ''}`}>
+          {rep === null ? '—' : Math.round(rep)}
+        </span>
+      </div>
+
+      <div className="gl-pillar-track">
+        {spread ? (
+          <>
+            <span
+              className="gl-pillar-spread"
+              style={{ left: `${spread.min}%`, right: `${100 - spread.max}%` }}
+            />
+            {rep !== null && (
+              <span className="gl-pillar-mean" style={{ left: `calc(${rep}% - 1px)` }} />
+            )}
+          </>
+        ) : rep !== null ? (
+          <span className="gl-pillar-fill" style={{ left: 0, width: `${rep}%` }} />
+        ) : null}
+      </div>
+
+      {p.ratings.length > 0 && (
+        <ul className="gl-raters">
+          {p.ratings.map((r) => (
+            <li key={r.sourceId} className="gl-rater">
+              <span style={{ color: 'var(--ink)' }}>
+                <span className="gl-rater-name">{r.sourceName}</span>
+                <span className="gl-rater-funding">{FUNDING_LABEL[r.fundingModel]}</span>
+              </span>
+              <span className="gl-rater-score">{Math.round(r.score)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ─── verdict ring (popup-scaled, simpler than ScoreRing) ───────────────────
+
+interface RingProps {
+  mean: number;
+  min: number;
+  max: number;
+  color: string;
+  label: string;
+  available: boolean;
+}
+
+function VerdictRing({ mean, min, max, color, label, available }: RingProps) {
+  const size = 140;
+  const thickness = 10;
+  const r = (size - thickness) / 2 - 4;
+  const cx = size / 2;
+  const cy = size / 2;
+  const circ = 2 * Math.PI * r;
+  const SWEEP = 270;
+  const arcLen = circ * (SWEEP / 360);
+  const gap = circ - arcLen;
+  const baseRot = 135;
+
+  const dashMean = arcLen * (mean / 100);
+  const bandStart = arcLen * (min / 100);
+  const bandLen = Math.max(0, arcLen * ((max - min) / 100));
+
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img" aria-label={`Verdict ${label}`}>
+      <g transform={`rotate(${baseRot} ${cx} ${cy})`}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--card-2)" strokeWidth={thickness} strokeLinecap="round" strokeDasharray={`${arcLen} ${gap}`} />
+        {available && bandLen > 0.5 && (
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeOpacity={0.25} strokeWidth={thickness} strokeLinecap="round" strokeDasharray={`0 ${bandStart} ${bandLen} ${circ}`} />
+        )}
+        {available && (
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={thickness} strokeLinecap="round" strokeDasharray={`${dashMean} ${circ}`} />
+        )}
+      </g>
+      <text x={cx} y={cy - 2} textAnchor="middle" fontFamily="Fraunces, Georgia, serif" fontWeight={600} fontSize={size * 0.32} fill="var(--ink)" style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.04em' }}>
+        {available ? Math.round(mean) : '—'}
+      </text>
+      <text x={cx} y={cy + 22} textAnchor="middle" fontFamily="Fraunces, Georgia, serif" fontSize={13} fontStyle="italic" fill={color}>
+        {label}
+      </text>
+    </svg>
+  );
+}
+
+// ─── empty states ──────────────────────────────────────────────────────────
+
+function IdleBlock() {
+  return (
+    <section className="gl-section gl-blank">
+      <Sonion mood="neutral" size={56} idle />
+      <p className="gl-blank-title">Open a cosmetic product on Amazon</p>
+      <p className="gl-blank-body">
+        I show every rating source side-by-side once you land on a product page.
+        In the meantime, your weighting is yours to set.
+      </p>
+    </section>
+  );
+}
+
+function UnknownBlock({ rawName }: { rawName: string }) {
+  return (
+    <section className="gl-section gl-blank">
+      <Sonion mood="neutral" size={56} idle />
+      <p className="gl-blank-title">Not in catalog yet</p>
+      <p className="gl-blank-body" style={{ fontSize: 12.5 }}>
+        <span style={{ color: 'var(--ink)' }}>{rawName}</span>
+      </p>
+      <p className="gl-blank-body">
+        Recall on the tail is genuinely worse — we&apos;d rather say so than fake a number.
+      </p>
+    </section>
+  );
+}
+
+// ─── helpers ───────────────────────────────────────────────────────────────
+
+function headerMood(pillars: Pillars | undefined, weights: Weights): SonionMood {
+  if (!pillars) return 'neutral';
+  const o = overall(pillars, weights);
+  if (o === null) return 'neutral';
+  if (o >= 70) return 'happy';
+  if (o >= 55) return 'neutral';
+  return 'concerned';
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }

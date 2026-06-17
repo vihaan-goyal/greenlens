@@ -1,0 +1,48 @@
+<!--
+  Trimmed Amazon snapshot — fragrance. Three reasons this case matters:
+    1. Byline is "Brand: X" (no "Visit the" / "Store" wrapping) — the most
+       common fragrance byline shape.
+    2. No ingredient list — fragrance listings almost never publish ingredients
+       on Amazon. The adapter must return a sighting with empty rawIngredients
+       rather than failing.
+    3. Barcode is EAN-13 (not UPC) inside `#productDetails_techSpec_section_1`.
+
+  Source pattern: amazon.com/dp/B000PEEPSC. (No image URL in this fixture —
+  another shape the adapter must tolerate.)
+-->
+<!doctype html>
+<html>
+  <head><title>Amazon.com: Chanel No. 5 Eau de Parfum</title></head>
+  <body>
+    <div id="wayfinding-breadcrumbs_feature_div">
+      <ul>
+        <li><a href="/b/?node=3760911">Beauty &amp; Personal Care</a></li>
+        <li><a href="/b/?node=11055981">Fragrance</a></li>
+        <li><a href="/b/?node=11058311">Women's</a></li>
+        <li><a href="/b/?node=11058361">Eau de Parfum</a></li>
+      </ul>
+    </div>
+
+    <div id="centerCol">
+      <h1 id="title">
+        <span id="productTitle">Chanel No. 5 Eau de Parfum Spray, 3.4 fl oz</span>
+      </h1>
+      <div id="bylineInfo_feature_div">
+        <span id="bylineInfo">Brand: Chanel</span>
+      </div>
+    </div>
+
+    <div id="aplus">
+      <h3>About this item</h3>
+      <p>The fragrance of the iconic and timeless Chanel No. 5. A floral aldehyde.</p>
+    </div>
+
+    <table id="productDetails_techSpec_section_1">
+      <tbody>
+        <tr><th>EAN</th><td>3145891255300</td></tr>
+        <tr><th>Item Volume</th><td>3.4 Fluid Ounces</td></tr>
+        <tr><th>Manufacturer</th><td>Chanel</td></tr>
+      </tbody>
+    </table>
+  </body>
+</html>

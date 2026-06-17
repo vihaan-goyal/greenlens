@@ -36,13 +36,15 @@ export const amazonAdapter: SiteAdapter = {
     const rawName = text(doc, ['#productTitle', '#title']);
     if (!rawName) return null;
 
-    const rawBrand =
-      // The byline shows up either as a linked brand or "Visit the X Store"
-      text(doc, ['#bylineInfo'])
-        ?.replace(/^(?:visit the |brand:\s*)/i, '')
-        ?.replace(/\s+store$/i, '')
-        ?.trim() ||
-      text(doc, ['a#bylineInfo']);
+    // Byline shapes we've seen in fixtures:
+    //   "Visit the Maybelline Store"  → strip "Visit the " prefix + " Store" suffix
+    //   "Brand: Chanel"               → strip "Brand: " prefix
+    //   "by SomeBrand"                → strip "by " prefix
+    //   "CeraVe"                      → unchanged
+    const rawBrand = text(doc, ['#bylineInfo'])
+      ?.replace(/^(?:visit the |brand:\s*|by\s+)/i, '')
+      ?.replace(/\s+store$/i, '')
+      ?.trim();
 
     const category = breadcrumbs(doc);
     const rawIngredients = ingredients(doc);
@@ -123,13 +125,13 @@ function breadcrumbs(doc: Document): string[] | undefined {
  * details table row. We tolerate any of them and split on commas.
  */
 function ingredients(doc: Document): string[] {
-  // Block-style "Ingredients" header followed by a paragraph.
+  // "Ingredients" heading followed by either a paragraph or a list.
   const allHeadings = doc.querySelectorAll('h2, h3, h4, h5, b, strong');
   for (const h of Array.from(allHeadings)) {
     if (!/^ingredients\b/i.test(h.textContent?.trim() ?? '')) continue;
     const sibling = h.nextElementSibling;
-    if (sibling?.textContent) {
-      const list = splitIngredients(sibling.textContent);
+    if (sibling) {
+      const list = readIngredientContainer(sibling);
       if (list.length) return list;
     }
     // Sometimes the ingredients live in the parent block alongside the heading.
@@ -155,6 +157,20 @@ function ingredients(doc: Document): string[] {
   return [];
 }
 
+/**
+ * Read ingredients out of whatever element follows the "Ingredients" heading.
+ * For <ul>/<ol> we walk each <li> individually — joining their textContent
+ * loses the implicit comma separator and produces one 250-char "ingredient".
+ */
+function readIngredientContainer(el: Element): string[] {
+  const tag = el.tagName.toLowerCase();
+  if (tag === 'ul' || tag === 'ol') {
+    return Array.from(el.querySelectorAll('li'))
+      .flatMap((li) => splitIngredients(li.textContent ?? ''));
+  }
+  return splitIngredients(el.textContent ?? '');
+}
+
 function splitIngredients(raw: string): string[] {
   return raw
     .replace(/\s+/g, ' ')
@@ -171,12 +187,28 @@ function splitIngredients(raw: string): string[] {
  */
 function gtinFromDetails(doc: Document): string | undefined {
   const labels = ['upc', 'ean', 'gtin', 'isbn'];
-  const rows = doc.querySelectorAll('tr, li');
-  for (const row of Array.from(rows)) {
+
+  // Strategy 1: structured table row. Read the value cell directly so we
+  // don't depend on textContent including separators between label and value
+  // (Amazon's `#productDetails_techSpec_section_1` joins them as "UPC<digits>").
+  for (const row of Array.from(doc.querySelectorAll('tr'))) {
+    const cells = row.querySelectorAll('th, td');
+    if (cells.length < 2) continue;
+    const label = (cells[0]?.textContent ?? '').trim().toLowerCase();
+    if (!labels.some((l) => label === l || label.startsWith(l + ' '))) continue;
+    const value = (cells[1]?.textContent ?? '').replace(/\s+/g, '');
+    const match = value.match(/\d{8,14}/);
+    if (match) return match[0];
+  }
+
+  // Strategy 2: bullet list. Here textContent typically separates "UPC" and
+  // digits with " : ", so a textContent scan is fine.
+  for (const row of Array.from(doc.querySelectorAll('li'))) {
     const txt = (row.textContent ?? '').toLowerCase();
     if (!labels.some((l) => txt.includes(l))) continue;
-    const digits = (row.textContent ?? '').match(/\b\d{8,14}\b/);
-    if (digits) return digits[0];
+    const match = (row.textContent ?? '').match(/\b\d{8,14}\b/);
+    if (match) return match[0];
   }
+
   return undefined;
 }

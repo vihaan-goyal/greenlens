@@ -20,8 +20,7 @@
     {
       "matches": [
         "https://www.amazon.com/*",
-        "https://smile.amazon.com/*",
-        "https://www.facebook.com/marketplace/*"
+        "https://smile.amazon.com/*"
       ],
       "js": ["content/index.ts"],
       "run_at": "document_idle"
@@ -30,7 +29,6 @@
   "permissions": ["storage", "activeTab"],
   "host_permissions": [
     "https://www.amazon.com/*",
-    "https://smile.amazon.com/*",
-    "https://www.facebook.com/marketplace/*"
+    "https://smile.amazon.com/*"
   ]
 }

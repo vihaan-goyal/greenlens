@@ -94,3 +94,93 @@ describe('amazonAdapter.extract — defensive cases', () => {
     expect(s.rawGtin).toBeUndefined();
   });
 });
+
+describe('amazonAdapter.extract (Maybelline makeup fixture)', () => {
+  const doc = docFrom(fixture('amazon-maybelline-mascara.html'));
+  const url = 'https://www.amazon.com/dp/B07PXGQC1Q';
+  const sighting = amazonAdapter.extract(doc, url)!;
+
+  it('reads the breadcrumb path into a Makeup category', () => {
+    expect(sighting.category).toEqual([
+      'Beauty & Personal Care',
+      'Makeup',
+      'Eyes',
+      'Mascara',
+    ]);
+  });
+
+  it('strips "Visit the X Store" byline format', () => {
+    expect(sighting.rawBrand).toBe('Maybelline');
+  });
+
+  it('parses <ul>-style ingredient list as separate entries (regression: previously collapsed into one 250-char string)', () => {
+    expect(sighting.rawIngredients.length).toBeGreaterThanOrEqual(8);
+    expect(sighting.rawIngredients).toContain('acacia senegal gum');
+    expect(sighting.rawIngredients).toContain('phenoxyethanol');
+    expect(sighting.rawIngredients).toContain('iron oxides (ci 77499)');
+    // No item should be longer than ~120 chars — a sentinel that we split per <li>
+    for (const ing of sighting.rawIngredients) {
+      expect(ing.length).toBeLessThanOrEqual(120);
+    }
+  });
+
+  it('finds UPC in productDetails_techSpec_section_1 (not just the bullet list)', () => {
+    expect(sighting.rawGtin).toBe('041554577778');
+  });
+});
+
+describe('amazonAdapter.extract (Chanel fragrance fixture)', () => {
+  const doc = docFrom(fixture('amazon-chanel-no5.html'));
+  const url = 'https://www.amazon.com/dp/B000PEEPSC';
+  const sighting = amazonAdapter.extract(doc, url)!;
+
+  it('still returns a sighting when there are no ingredients (degrade gracefully)', () => {
+    expect(sighting).not.toBeNull();
+    expect(sighting.rawIngredients).toEqual([]);
+  });
+
+  it('strips "Brand: X" byline format', () => {
+    expect(sighting.rawBrand).toBe('Chanel');
+  });
+
+  it('reads a Fragrance category breadcrumb (classifier signal)', () => {
+    expect(sighting.category?.[0]).toBe('Beauty & Personal Care');
+    expect(sighting.category).toContain('Fragrance');
+  });
+
+  it('finds EAN-13 in the tech-spec table (not UPC)', () => {
+    expect(sighting.rawGtin).toBe('3145891255300');
+  });
+
+  it('returns no image when the page has none (does not throw)', () => {
+    expect(sighting.imageUrl).toBeUndefined();
+  });
+});
+
+describe('amazonAdapter — byline strip variants', () => {
+  const url = 'https://www.amazon.com/dp/B0';
+  const wrap = (byline: string) =>
+    docFrom(
+      `<html><body>
+         <span id="productTitle">X Cream</span>
+         <span id="bylineInfo">${byline}</span>
+       </body></html>`,
+    );
+
+  it('"Visit the X Store" → X', () => {
+    expect(amazonAdapter.extract(wrap('Visit the Drunk Elephant Store'), url)?.rawBrand)
+      .toBe('Drunk Elephant');
+  });
+
+  it('"Brand: X" → X', () => {
+    expect(amazonAdapter.extract(wrap('Brand: Glossier'), url)?.rawBrand).toBe('Glossier');
+  });
+
+  it('"by X" → X', () => {
+    expect(amazonAdapter.extract(wrap('by Aesop'), url)?.rawBrand).toBe('Aesop');
+  });
+
+  it('bare brand name → unchanged', () => {
+    expect(amazonAdapter.extract(wrap('Olaplex'), url)?.rawBrand).toBe('Olaplex');
+  });
+});

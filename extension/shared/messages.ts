@@ -35,6 +35,22 @@ export type BgToContent =
   | { kind: 'noMatch'; rawName: string }
   | { kind: 'weights'; weights: Weights };
 
+// ─── popup → content (via chrome.tabs.sendMessage) ──────────────────────────
+// The popup queries the active tab's content script to learn what it's
+// currently showing — verdict, unknown, or idle. We don't cache verdicts in
+// the SW because MV3 service workers go to sleep; the content script is the
+// authoritative view of "what does the user see right now."
+
+export type PopupToContent = { kind: 'getCurrentState' };
+
+export type ContentState =
+  | { kind: 'verdict'; payload: VerdictPayload }
+  | { kind: 'unknown'; rawName: string }
+  | { kind: 'idle' };
+
+/** Returned to popup when the tab is one of ours; otherwise sendMessage rejects. */
+export type ContentToPopup = ContentState | { kind: 'none' };
+
 // ─── typed wrappers ─────────────────────────────────────────────────────────
 // Thin helpers so callers stop sprinkling `chrome.runtime.sendMessage` with
 // untyped object literals. Lives in /shared so popup, content, and options

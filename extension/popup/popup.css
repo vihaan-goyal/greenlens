@@ -1,0 +1,245 @@
+/* Popup styles. Mirrors the design tokens used by the in-page card so the
+   two surfaces feel like one product. The popup is its own document (not a
+   shadow tree), so :root in tokens.css applies as written — no rewrite needed. */
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Manrope', ui-rounded, system-ui, -apple-system, sans-serif;
+  width: 380px;
+}
+body { min-height: 420px; }
+
+/* ── header ────────────────────────────────────────────────────────────── */
+.gl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.gl-wordmark {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0;
+}
+.gl-wordmark::first-letter { color: var(--accent-deep); }
+.gl-header-tag {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ── section frame ─────────────────────────────────────────────────────── */
+.gl-section {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.gl-section:last-of-type { border-bottom: none; }
+.gl-eyebrow {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 6px;
+}
+.gl-product-name {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0;
+  color: var(--ink);
+}
+.gl-brand {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin: 2px 0 0;
+}
+
+/* ── verdict ring ──────────────────────────────────────────────────────── */
+.gl-ring-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 14px 0 6px;
+}
+.gl-ring-range {
+  text-align: center;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0;
+}
+.gl-ring-range b {
+  font-weight: 600;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── pillar rows ──────────────────────────────────────────────────────── */
+.gl-pillar {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--card-2);
+  border-radius: 12px;
+}
+.gl-pillar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.gl-pillar-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.gl-pillar-rep {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 600;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.gl-pillar-rep--none { color: var(--ink-3); }
+.gl-pillar-track {
+  position: relative;
+  height: 6px;
+  background: var(--line-soft);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.gl-pillar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: currentColor;
+}
+.gl-pillar-spread {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.28;
+}
+.gl-pillar-mean {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 10px;
+  background: var(--ink);
+  border-radius: 1px;
+}
+.gl-disagree-pill {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--verdict-poor);
+  margin-left: 6px;
+}
+
+/* rater rows under each pillar */
+.gl-raters {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.gl-rater {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+.gl-rater + .gl-rater {
+  border-top: 1px solid var(--line-soft);
+}
+.gl-rater-name { color: var(--ink); font-weight: 500; }
+.gl-rater-funding {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-left: 6px;
+}
+.gl-rater-score {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ── weights ──────────────────────────────────────────────────────────── */
+.gl-weight {
+  display: block;
+  margin-bottom: 12px;
+}
+.gl-weight-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+}
+.gl-weight-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  font-weight: 600;
+}
+.gl-weight input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent-deep);
+}
+
+.gl-foot {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+  margin: 8px 0 0;
+  line-height: 1.45;
+}
+
+/* ── idle / unknown ───────────────────────────────────────────────────── */
+.gl-blank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 20px;
+  text-align: center;
+}
+.gl-blank-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 15px;
+  color: var(--ink);
+  margin: 0;
+}
+.gl-blank-body {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  margin: 0;
+  max-width: 280px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

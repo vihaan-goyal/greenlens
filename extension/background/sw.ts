@@ -11,7 +11,7 @@ import type { MatchableItem } from '@/lib/matcher/features';
 const WEIGHTS_KEY = 'greenlens.weights';
 
 async function readWeights(): Promise<Weights> {
-  const stored = await chrome.storage.sync.get([WEIGHTS_KEY]);
+  const stored = await chrome.storage.local.get([WEIGHTS_KEY]);
   const v = stored[WEIGHTS_KEY] as Partial<Weights> | undefined;
   const d = defaultWeights();
   if (!v) return d;
@@ -122,14 +122,10 @@ chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
 // side (the SW never assembles a single blended number).
 
 chrome.storage.onChanged.addListener(async (changes, area) => {
-  if (area !== 'sync' || !changes[WEIGHTS_KEY]) return;
+  if (area !== 'local' || !changes[WEIGHTS_KEY]) return;
   const weights = await readWeights();
   const matched = await chrome.tabs.query({
-    url: [
-      'https://www.amazon.com/*',
-      'https://smile.amazon.com/*',
-      'https://www.facebook.com/marketplace/*',
-    ],
+    url: ['https://www.amazon.com/*', 'https://smile.amazon.com/*'],
   });
   for (const tab of matched) {
     if (tab.id === undefined) continue;

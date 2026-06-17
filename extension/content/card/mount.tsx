@@ -2,7 +2,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { Card } from './Card';
 import { UnknownCard } from './UnknownCard';
 import { IdleCard } from './IdleCard';
-import type { VerdictPayload } from '../../shared/messages';
+import type { ContentState, VerdictPayload } from '../../shared/messages';
 import type { Weights } from '@/lib/domain/types';
 import { defaultWeights } from '@/lib/domain/scoring';
 import tokensCss from '@/styles/tokens.css?inline';
@@ -101,6 +101,18 @@ export function updateCard(patch: { weights?: Weights }) {
   if (!state || state.kind !== 'verdict' || !patch.weights) return;
   state = { ...state, weights: patch.weights };
   render();
+}
+
+/**
+ * Snapshot the current visible state for the popup. Strips the locally-held
+ * weights out of the verdict state — those live in chrome.storage.local and
+ * the popup reads them from there directly.
+ */
+export function getContentState(): ContentState {
+  if (!state) return { kind: 'idle' };
+  if (state.kind === 'verdict') return { kind: 'verdict', payload: state.payload };
+  if (state.kind === 'unknown') return { kind: 'unknown', rawName: state.rawName };
+  return { kind: 'idle' };
 }
 
 export function unmountCard() {
