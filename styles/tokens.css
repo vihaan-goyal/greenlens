@@ -1,5 +1,6 @@
 :root {
   --bg: #ECE5D8;
+  --bg-deep: #E2D9C6;
   --card: #FBF9F4;
   --card-2: #F4EFE5;
 
@@ -8,13 +9,26 @@
   --ink-3: #A79E8C;
 
   --line: #E4DBCB;
+  --line-soft: #EFE7D6;
   --espresso: #3A342B;
   --sand: #E7DFCF;
   --accent: #7C8466;
+  --accent-deep: #5E6A45;
+  --accent-warm: #C99560;
 
   --verdict-excellent: #5E7B53;
   --verdict-good: #8A9A5E;
   --verdict-fair: #B5904A;
   --verdict-poor: #BC8255;
   --verdict-bad: #B0655A;
+
+  /* Halo tints for radial gradient backgrounds (soft, warm-beige-safe). */
+  --halo-leaf: rgba(94, 123, 83, 0.22);
+  --halo-moss: rgba(124, 132, 102, 0.20);
+  --halo-amber: rgba(201, 149, 96, 0.20);
+  --halo-clay: rgba(188, 130, 85, 0.20);
+  --halo-rose: rgba(176, 101, 90, 0.18);
+
+  --shadow-soft: 0 1px 2px rgba(46, 42, 34, 0.05), 0 18px 38px -18px rgba(46, 42, 34, 0.18);
+  --shadow-lift: 0 2px 4px rgba(46, 42, 34, 0.06), 0 26px 50px -22px rgba(46, 42, 34, 0.25);
 }

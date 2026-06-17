@@ -6,15 +6,19 @@ const config: Config = {
     extend: {
       colors: {
         bg: 'var(--bg)',
+        'bg-deep': 'var(--bg-deep)',
         card: 'var(--card)',
         'card-2': 'var(--card-2)',
         ink: 'var(--ink)',
         'ink-2': 'var(--ink-2)',
         'ink-3': 'var(--ink-3)',
         line: 'var(--line)',
+        'line-soft': 'var(--line-soft)',
         espresso: 'var(--espresso)',
         sand: 'var(--sand)',
         accent: 'var(--accent)',
+        'accent-deep': 'var(--accent-deep)',
+        'accent-warm': 'var(--accent-warm)',
         verdict: {
           excellent: 'var(--verdict-excellent)',
           good: 'var(--verdict-good)',
@@ -25,12 +29,15 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['Manrope', 'ui-rounded', 'system-ui', 'sans-serif'],
+        display: ['Fraunces', 'Iowan Old Style', 'Georgia', 'serif'],
       },
       borderRadius: {
-        card: '18px',
+        card: '22px',
+        pill: '999px',
       },
       boxShadow: {
-        card: '0 1px 2px rgba(46, 42, 34, 0.04), 0 8px 24px rgba(46, 42, 34, 0.04)',
+        card: 'var(--shadow-soft)',
+        lift: 'var(--shadow-lift)',
       },
     },
   },

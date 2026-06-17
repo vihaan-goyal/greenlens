@@ -1,4 +1,5 @@
 @import '../styles/tokens.css';
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Manrope:wght@300..800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,7 +10,7 @@
   body {
     background-color: var(--bg);
     color: var(--ink);
-    font-feature-settings: 'tnum' 1, 'cv11' 1;
+    font-feature-settings: 'tnum' 1, 'cv11' 1, 'ss01' 1;
   }
 
   body {
@@ -30,6 +31,109 @@
 @layer utilities {
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+  .font-display {
+    font-family: 'Fraunces', 'Iowan Old Style', 'Georgia', serif;
+    font-feature-settings: 'ss01' 1, 'ss02' 1, 'ss03' 1;
+    font-variation-settings: 'opsz' 144, 'SOFT' 50, 'WONK' 0;
+    letter-spacing: -0.02em;
+  }
+  .font-display-wonk {
+    font-family: 'Fraunces', 'Iowan Old Style', 'Georgia', serif;
+    font-variation-settings: 'opsz' 144, 'SOFT' 100, 'WONK' 1;
+    letter-spacing: -0.025em;
+  }
+
+  /* Paper-grain noise — a hand-mixed CSS texture, no asset, layered very
+     softly over the warm beige so the screen reads like printed stock. */
+  .grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(rgba(46, 42, 34, 0.055) 1px, transparent 1px),
+      radial-gradient(rgba(46, 42, 34, 0.04) 1px, transparent 1px);
+    background-size: 3px 3px, 7px 7px;
+    background-position: 0 0, 1px 2px;
+    mix-blend-mode: multiply;
+    opacity: 0.45;
+    z-index: 0;
+  }
+
+  /* Soft botanical halo — radial verdict-colored bloom anchored to a corner. */
+  .halo-tl::after,
+  .halo-tr::after,
+  .halo-bl::after,
+  .halo-br::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 0;
+  }
+  .halo-tl::after {
+    background: radial-gradient(120% 100% at 0% 0%, var(--halo, var(--halo-leaf)), transparent 60%);
+  }
+  .halo-tr::after {
+    background: radial-gradient(120% 100% at 100% 0%, var(--halo, var(--halo-leaf)), transparent 60%);
+  }
+  .halo-bl::after {
+    background: radial-gradient(120% 100% at 0% 100%, var(--halo, var(--halo-leaf)), transparent 60%);
+  }
+  .halo-br::after {
+    background: radial-gradient(140% 110% at 100% 100%, var(--halo, var(--halo-leaf)), transparent 65%);
+  }
+  .halo-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Page entry choreography. */
+  @keyframes rise {
+    0% {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes bloom {
+    0% {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes drift {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  @keyframes sweep {
+    0% { stroke-dashoffset: var(--circ, 1000); }
+    100% { stroke-dashoffset: var(--target, 0); }
+  }
+  @keyframes shimmer {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.7; }
+  }
+  .anim-rise {
+    animation: rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .anim-bloom {
+    animation: bloom 800ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .anim-drift {
+    animation: drift 5s ease-in-out infinite;
+  }
+  .anim-shimmer {
+    animation: shimmer 4s ease-in-out infinite;
   }
 }
 

@@ -4,6 +4,11 @@ import { mockRepository, ingredientSlug } from '@/lib/data/mock-repository';
 import { RaterSpread } from '@/components/RaterSpread';
 import { CompositeRange } from '@/components/CompositeRange';
 import { WeightControls } from '@/components/WeightControls';
+import { ScoreRing } from '@/components/ScoreRing';
+import { PillarBars } from '@/components/PillarBars';
+import { DisagreementCallout } from '@/components/DisagreementCallout';
+import { BrandMark } from '@/components/BrandMark';
+import { SonionReactive } from '@/components/SonionReactive';
 
 interface ProductPageProps {
   params: Promise<{ id: string }>;
@@ -19,54 +24,100 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const alternatives = await mockRepository.listAlternatives(product.id);
 
   return (
-    <main className="px-5 pt-4 pb-6">
-      <nav className="mb-5 text-xs text-ink-3">
-        <Link href="/" className="hover:text-ink">
-          ← back
+    <main className="relative px-5 pt-3 pb-12">
+      {/* Back chip */}
+      <nav className="mb-3">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-ink-2"
+          style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
+        >
+          <span>←</span> back
         </Link>
       </nav>
 
-      <header className="mb-6">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-ink-3">{brand.name}</p>
-        <h1 className="mt-1 text-[22px] font-semibold leading-tight text-ink">
-          {product.displayName}
-        </h1>
-        <p className="mt-2 text-xs text-ink-2">
-          {product.category} · {product.sizeValue}
-          {product.sizeUnit}
-          {product.gtin && <span> · GTIN {product.gtin}</span>}
-        </p>
-      </header>
+      {/* ─── HERO ───────────────────────────────────────────────────────── */}
+      <section className="relative mb-5 overflow-hidden rounded-card halo-tr anim-rise"
+        style={{
+          background: 'var(--card)',
+          border: '1px solid var(--line)',
+          ['--halo' as string]: 'var(--halo-leaf)',
+        }}
+      >
+        <div className="halo-content p-5">
+          <div className="flex items-center gap-2.5">
+            <BrandMark name={brand.name} size={38} accent="var(--accent-deep)" />
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-3">
+                {brand.name}
+              </p>
+              <p className="font-display text-[20px] font-semibold leading-tight text-ink line-clamp-2">
+                {product.displayName}
+              </p>
+            </div>
+          </div>
 
-      <section className="mb-7 rounded-card bg-card p-5 shadow-card ring-1 ring-line">
-        <RaterSpread pillars={pillars} />
+          <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-ink-3">
+            {product.category} · {product.sizeValue}
+            {product.sizeUnit}
+            {product.gtin && <span> · GTIN {product.gtin}</span>}
+          </p>
+
+          {/* Ring centerpiece */}
+          <div className="relative mt-4 flex flex-col items-center justify-center">
+            <ScoreRing pillars={pillars} size={252} thickness={16} />
+          </div>
+
+          {/* Pillar bars under the dial */}
+          <div className="mt-2 px-1">
+            <PillarBars pillars={pillars} height={120} />
+          </div>
+        </div>
       </section>
 
-      <section className="mb-4 rounded-card bg-card p-5 ring-1 ring-line">
-        <CompositeRange pillars={pillars} />
+      {/* ─── DISAGREEMENT CALLOUT ──────────────────────────────────────── */}
+      <section className="mb-5 anim-rise" style={{ animationDelay: '120ms' }}>
+        <DisagreementCallout pillars={pillars} />
       </section>
 
-      <section className="mb-7">
-        <WeightControls />
-      </section>
-
-      <section className="mb-7 grid grid-cols-2 gap-3">
+      {/* ─── ALTERNATIVES + FLAGS TILES ────────────────────────────────── */}
+      <section className="mb-5 grid grid-cols-2 gap-3 anim-rise" style={{ animationDelay: '180ms' }}>
         {alternatives.length > 0 ? (
           <Link
             href={`/product/${product.id}/alternatives`}
-            className="rounded-card bg-card px-4 py-4 ring-1 ring-line transition hover:ring-accent"
+            className="relative overflow-hidden rounded-card p-3.5 halo-bl"
+            style={{
+              background: 'var(--card)',
+              border: '1px solid var(--line)',
+              ['--halo' as string]: 'var(--halo-leaf)',
+            }}
           >
-            <p className="text-sm font-medium text-ink">See better options</p>
-            <p className="mt-1 text-xs text-ink-2">
-              {alternatives.length} cleaner{' '}
-              {alternatives.length === 1 ? 'alternative' : 'alternatives'} ranked by ingredient safety.
-            </p>
+            <div className="halo-content">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--verdict-excellent)' }}>
+                Cleaner options
+              </p>
+              <p className="mt-1 font-display text-[18px] font-semibold leading-none text-ink">
+                {alternatives.length}{' '}
+                <span className="italic font-medium text-ink-2">found</span>
+              </p>
+              <p className="mt-2 text-[10.5px] leading-snug text-ink-2">
+                Ranked by ingredient safety. Tradeoffs named for each.
+              </p>
+              <span className="mt-3 inline-block text-[11px] font-semibold" style={{ color: 'var(--accent-deep)' }}>
+                See better →
+              </span>
+            </div>
           </Link>
         ) : (
-          <div className="rounded-card bg-card-2 px-4 py-4 ring-1 ring-line">
-            <p className="text-sm font-medium text-ink">No cleaner alternatives</p>
-            <p className="mt-1 text-xs text-ink-2">
-              Nothing in the catalog beats this on ingredient safety.
+          <div
+            className="rounded-card p-3.5"
+            style={{ background: 'var(--card-2)', border: '1px solid var(--line)' }}
+          >
+            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-ink-3">
+              Alternatives
+            </p>
+            <p className="mt-1 font-display text-[16px] font-semibold leading-tight text-ink">
+              Nothing beats this on safety.
             </p>
           </div>
         )}
@@ -74,36 +125,88 @@ export default async function ProductPage({ params }: ProductPageProps) {
         {flags.length > 0 ? (
           <Link
             href={`/product/${product.id}/flag/${flags[0]!.slug}`}
-            className="rounded-card bg-card px-4 py-4 ring-1 ring-line transition hover:ring-accent"
+            className="relative overflow-hidden rounded-card p-3.5 halo-br"
+            style={{
+              background: 'var(--card)',
+              border: '1px solid var(--line)',
+              ['--halo' as string]: 'var(--halo-clay)',
+            }}
           >
-            <p className="text-sm font-medium text-ink">What's flagged</p>
-            <p className="mt-1 text-xs text-ink-2">
-              {flags.length} {flags.length === 1 ? 'ingredient' : 'ingredients'} where raters split.
-            </p>
+            <div className="halo-content">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--verdict-poor)' }}>
+                Flagged
+              </p>
+              <p className="mt-1 font-display text-[18px] font-semibold leading-none text-ink">
+                {flags.length}{' '}
+                <span className="italic font-medium text-ink-2">
+                  {flags.length === 1 ? 'ingredient' : 'ingredients'}
+                </span>
+              </p>
+              <p className="mt-2 text-[10.5px] leading-snug text-ink-2">
+                Where raters split on the chemistry.
+              </p>
+              <span className="mt-3 inline-block text-[11px] font-semibold" style={{ color: 'var(--accent-deep)' }}>
+                What's flagged →
+              </span>
+            </div>
           </Link>
         ) : (
-          <div className="rounded-card bg-card-2 px-4 py-4 ring-1 ring-line">
-            <p className="text-sm font-medium text-ink">No ingredient flags</p>
-            <p className="mt-1 text-xs text-ink-2">No rater has flagged a specific ingredient.</p>
+          <div
+            className="rounded-card p-3.5"
+            style={{ background: 'var(--card-2)', border: '1px solid var(--line)' }}
+          >
+            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-ink-3">
+              Flags
+            </p>
+            <p className="mt-1 font-display text-[16px] font-semibold leading-tight text-ink">
+              No ingredient flags.
+            </p>
           </div>
         )}
       </section>
 
+      {/* ─── EVERY RATER ────────────────────────────────────────────────── */}
+      <section className="mb-5 anim-rise" style={{ animationDelay: '240ms' }}>
+        <SectionLabel kicker="the receipts" title="Every rater, every axis" />
+        <div
+          className="rounded-card p-4"
+          style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
+        >
+          <RaterSpread pillars={pillars} />
+        </div>
+      </section>
+
+      {/* ─── COMPOSITE RANGE ───────────────────────────────────────────── */}
+      <section className="mb-5 anim-rise" style={{ animationDelay: '280ms' }}>
+        <SectionLabel kicker="your composite" title="Weighted by what you care about" />
+        <div
+          className="rounded-card p-4"
+          style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
+        >
+          <CompositeRange pillars={pillars} />
+        </div>
+      </section>
+
+      {/* ─── WEIGHTS ───────────────────────────────────────────────────── */}
+      <section className="mb-6 anim-rise" style={{ animationDelay: '320ms' }}>
+        <WeightControls />
+      </section>
+
+      {/* ─── FLAGGED LIST ──────────────────────────────────────────────── */}
       {flags.length > 0 && (
-        <section className="mb-7">
-          <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-3">
-            Flagged ingredients
-          </h2>
+        <section className="mb-6">
+          <SectionLabel kicker="contested chemistry" title="Flagged ingredients" />
           <ul className="space-y-2">
             {flags.map((f) => (
               <li key={f.slug}>
                 <Link
                   href={`/product/${product.id}/flag/${f.slug}`}
-                  className="flex items-center justify-between rounded-card bg-card px-4 py-3 ring-1 ring-line transition hover:ring-accent"
+                  className="flex items-center justify-between rounded-card px-4 py-3 transition hover:shadow-card"
+                  style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
                 >
-                  <span className="text-sm text-ink">{f.name}</span>
-                  <span className="text-[11px] text-ink-3">
-                    {f.positions.length} rater positions →
+                  <span className="font-display text-[15px] font-medium text-ink">{f.name}</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-3">
+                    {f.positions.length} positions →
                   </span>
                 </Link>
               </li>
@@ -112,22 +215,33 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </section>
       )}
 
+      {/* ─── INGREDIENTS ───────────────────────────────────────────────── */}
       <section>
-        <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-3">
-          Ingredients (as labeled)
-        </h2>
+        <SectionLabel kicker="as labeled" title="Ingredients" />
         <ul className="flex flex-wrap gap-1.5">
           {product.ingredients.map((name) => {
             const slug = ingredientSlug(name);
             const flagged = flags.some((f) => f.slug === slug);
             const inner = (
               <span
-                className={`rounded-full px-2.5 py-1 text-[11px] ring-1 ring-line ${
-                  flagged ? 'bg-card text-ink' : 'bg-card-2 text-ink-2'
+                className={`rounded-pill px-2.5 py-1 text-[11px] ${
+                  flagged
+                    ? 'font-semibold text-ink'
+                    : 'text-ink-2'
                 }`}
+                style={{
+                  background: flagged ? 'var(--card)' : 'var(--card-2)',
+                  border: flagged
+                    ? '1px solid var(--verdict-poor)'
+                    : '1px solid var(--line-soft)',
+                }}
               >
                 {name}
-                {flagged && <span className="ml-1 text-ink-3">·flag</span>}
+                {flagged && (
+                  <span className="ml-1.5 text-[9px] font-semibold uppercase tracking-wider" style={{ color: 'var(--verdict-poor)' }}>
+                    · flagged
+                  </span>
+                )}
               </span>
             );
             return (
@@ -142,6 +256,26 @@ export default async function ProductPage({ params }: ProductPageProps) {
           })}
         </ul>
       </section>
+
+      {/* ─── FLOATING SONION ───────────────────────────────────────────── */}
+      <div className="pointer-events-none fixed bottom-12 right-5 z-40">
+        <div className="pointer-events-auto">
+          <SonionReactive pillars={pillars} size={84} halo />
+        </div>
+      </div>
     </main>
+  );
+}
+
+function SectionLabel({ kicker, title }: { kicker: string; title: string }) {
+  return (
+    <div className="mb-2.5 flex items-baseline justify-between">
+      <h2 className="font-display text-[17px] font-semibold leading-none text-ink">
+        {title}
+      </h2>
+      <span className="text-[9.5px] font-semibold uppercase tracking-[0.22em]" style={{ color: 'var(--accent-deep)' }}>
+        {kicker}
+      </span>
+    </div>
   );
 }
