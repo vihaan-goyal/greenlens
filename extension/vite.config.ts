@@ -11,11 +11,20 @@ import manifest from './manifest.json' with { type: 'json' };
  * Path alias mirrors the project tsconfig so /lib/domain and /styles import
  * the same way from both contexts.
  */
+// Stamped at build time so SW + content + popup all carry the same string.
+// Lets us confirm at runtime whether a page still has an older content
+// script injected (Chrome doesn't auto-re-inject into already-open tabs on
+// extension reload — only on the next navigation).
+const BUILD_ID = new Date().toISOString();
+
 export default defineConfig({
   root: __dirname,
   // CRXJS has its own narrower ManifestV3 type that doesn't perfectly line up
   // with @types/chrome's definition — the JSON is the source of truth at runtime.
   plugins: [react(), crx({ manifest: manifest as unknown as Parameters<typeof crx>[0]['manifest'] })],
+  define: {
+    __GL_BUILD__: JSON.stringify(BUILD_ID),
+  },
   resolve: {
     alias: {
       // `@/*` points to the project root so shared imports like

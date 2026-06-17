@@ -1,0 +1,53 @@
+<!--
+  Source SVG for the extension's toolbar icon. A simplified Sonion: rounded
+  warm-beige tile (matches the popup background), a three-leaf sprout
+  cluster (matches the Sonion mascot's leaves), no face — at 16×16 the head
+  would be unreadable.
+
+  Regenerate the PNGs after editing:
+      npm run icons
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="62%">
+      <stop offset="0%" stop-color="#F4EFE5" />
+      <stop offset="100%" stop-color="#E2D9C6" />
+    </radialGradient>
+    <radialGradient id="leaf" cx="40%" cy="35%" r="80%">
+      <stop offset="0%" stop-color="#9CB075" />
+      <stop offset="60%" stop-color="#6E8854" />
+      <stop offset="100%" stop-color="#4F6A3C" />
+    </radialGradient>
+    <linearGradient id="stem" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7A8D52" />
+      <stop offset="100%" stop-color="#56683A" />
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded tile background. -->
+  <rect x="0" y="0" width="128" height="128" rx="28" ry="28" fill="url(#bg)" />
+
+  <!-- Sprout cluster: center leaf + flanking pair. Anchored low so the
+       shape reads as growing upward from the bottom of the tile. -->
+  <g transform="translate(64 100)">
+    <!-- stem -->
+    <path d="M0 0 C -3 -8 5 -16 0 -28"
+          stroke="url(#stem)" stroke-width="6" stroke-linecap="round" fill="none" />
+
+    <!-- left leaf -->
+    <g transform="rotate(-42) translate(0 -28)">
+      <path d="M0 0 C 10 -14 10 -32 0 -44 C -10 -32 -10 -14 0 0 Z" fill="url(#leaf)" opacity="0.95" />
+      <path d="M0 -4 L 0 -36" stroke="#3F5630" stroke-width="1.4" stroke-linecap="round" />
+    </g>
+
+    <!-- right leaf -->
+    <g transform="rotate(42) translate(0 -28)">
+      <path d="M0 0 C 10 -14 10 -32 0 -44 C -10 -32 -10 -14 0 0 Z" fill="url(#leaf)" opacity="0.95" />
+      <path d="M0 -4 L 0 -36" stroke="#3F5630" stroke-width="1.4" stroke-linecap="round" />
+    </g>
+
+    <!-- center leaf — drawn last so it sits in front -->
+    <path d="M0 -22 C 8 -42 8 -64 0 -78 C -8 -64 -8 -42 0 -22 Z" fill="url(#leaf)" />
+    <path d="M0 -28 L 0 -72" stroke="#3F5630" stroke-width="1.6" stroke-linecap="round" />
+  </g>
+</svg>

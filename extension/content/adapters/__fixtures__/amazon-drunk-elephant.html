@@ -1,0 +1,53 @@
+<!--
+  Trimmed Amazon snapshot — premium DTC brand-store layout. Three reasons
+  this case matters:
+    1. NO `#bylineInfo` element. The brand byline is rendered as
+       `#visitStoreLink` and only reachable via /stores/<brand>/ store links.
+    2. Ingredients are NOT in the DOM — Drunk Elephant publishes them on
+       drunkelephant.com but not on this Amazon listing. The matcher must
+       still resolve through brand + name without an ingredient signal.
+    3. The "Brand" row in the product details table is another fallback.
+
+  Source pattern: amazon.com/dp/B07934S6WK (Drunk Elephant Protini Cream).
+  Captured 2026-06-17 from a live page probe.
+-->
+<!doctype html>
+<html>
+  <head><title>Amazon.com: Drunk Elephant Protini Polypeptide Cream</title></head>
+  <body>
+    <div id="wayfinding-breadcrumbs_feature_div">
+      <ul>
+        <li><a href="/b/?node=3760911">Beauty &amp; Personal Care</a></li>
+        <li><a href="/b/?node=11060451">Skin Care</a></li>
+        <li><a href="/b/?node=11060461">Face</a></li>
+        <li><a href="/b/?node=11061071">Creams &amp; Moisturizers</a></li>
+        <li><a href="/b/?node=11061091">Face Moisturizers</a></li>
+      </ul>
+    </div>
+
+    <div id="centerCol">
+      <h1 id="title">
+        <span id="productTitle">
+          Drunk Elephant Protini Polypeptide Cream - Firming Moisturizer -
+          Clean Clinical Skincare - Cruelty-Free - Dermatologist-Tested -
+          Free of Essential Oils, Silicones, and Fragrance
+        </span>
+      </h1>
+
+      <!-- This page has NO #bylineInfo. The brand store link is the only
+           textual byline. -->
+      <a id="brandteaser" href="/stores/DrunkElephant/page/6ABF?lp_asin=B07934S6WK"></a>
+      <a id="visitStoreLink" href="/stores/DrunkElephant/page/6ABF?lp_asin=B07934S6WK">
+        Visit the Drunk Elephant Store
+      </a>
+    </div>
+
+    <table id="productDetails_detailBullets_sections1">
+      <tbody>
+        <tr><th>Brand</th><td>Drunk Elephant</td></tr>
+        <tr><th>Item Form</th><td>Cream</td></tr>
+        <tr><th>Skin Type</th><td>All</td></tr>
+      </tbody>
+    </table>
+  </body>
+</html>

@@ -96,6 +96,19 @@ export function mountIdle() {
   render();
 }
 
+/**
+ * Idempotent: mount idle if and only if nothing is shown yet. Used while
+ * resolving a sighting so the previous card stays visible until the new one
+ * is ready — prevents a verdict→idle→verdict flicker on SPA nav between
+ * product pages.
+ */
+export function ensureIdle() {
+  ensureHost();
+  if (state !== null) return;
+  state = { kind: 'idle' };
+  render();
+}
+
 /** Re-render with new weights. Ignored when the current state isn't a verdict. */
 export function updateCard(patch: { weights?: Weights }) {
   if (!state || state.kind !== 'verdict' || !patch.weights) return;

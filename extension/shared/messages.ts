@@ -1,4 +1,4 @@
-import type { Pillars, Weights } from '@/lib/domain/types';
+import type { IngredientFlag, Pillars, Weights } from '@/lib/domain/types';
 import type { ProductView } from '@/lib/data/repository';
 import type { RawProductSighting } from './sighting';
 
@@ -25,6 +25,12 @@ export interface VerdictPayload {
   brand: ProductView['brand'];
   pillars: Pillars;
   sources: ProductView['sources'];
+  /**
+   * Per-ingredient flag entries for this product. Each entry holds every
+   * rater's stance + funding model + reasoning — the thesis screen of the
+   * product, never aggregated into a single number.
+   */
+  flags: IngredientFlag[];
   /** 0..1, how confident the matcher is this is the right canonical product. */
   matchConfidence: number;
 }

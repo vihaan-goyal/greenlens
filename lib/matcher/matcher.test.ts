@@ -220,4 +220,50 @@ describe('matcher / resolveItem — live extension lookup', () => {
     };
     expect(resolveItem(stranger, catalog, BRANDS)).toBeNull();
   });
+
+  // Regression: a variant SKU page (refill, mini, etc.) reports a different
+  // UPC than the canonical 50ml. An earlier version treated GTIN mismatch
+  // as 6.0-weight negative evidence and dragged the score below threshold.
+  // We now treat mismatch as "no information" and let brand+name decide.
+  it('matches a variant SKU (different GTIN) when brand + name align', () => {
+    const variantSighting: MatchableItem = {
+      id: 'sighting',
+      brand: 'BigB',
+      name: 'BigB Ceramide Repair Cream Refill 100ml',
+      // Different UPC than the canonical entry — this is a refill SKU.
+      gtin: '086556004739',
+      ingredients: [
+        'water', 'glycerin', 'ceramide np', 'niacinamide', 'squalane',
+      ],
+    };
+    // The catalog Product-B entry has gtin '098765432109' (the 50ml version).
+    const r = resolveItem(variantSighting, catalog, BRANDS);
+    expect(r?.productId).toBe('prod-B');
+  });
+
+  // Regression: a real Amazon page has a much longer title and ingredient list
+  // than our canonical catalog entry. An earlier version using Jaccard on
+  // ingredients dragged the score below threshold even though every catalog
+  // ingredient was present in the page. Overlap coefficient handles the
+  // asymmetric case correctly.
+  it('matches when the sighting has many more ingredients than the catalog (real-world asymmetry)', () => {
+    const longSighting: MatchableItem = {
+      id: 'amzn-longish',
+      brand: 'BigB',
+      name:
+        'BigB Ceramide Repair Cream 50ml — Firming, Hydrating, Dermatologist-Tested, ' +
+        'Fragrance Free, Non-Comedogenic, For Normal to Dry Skin',
+      ingredients: [
+        // catalog's 5 ingredients
+        'water', 'glycerin', 'ceramide np', 'niacinamide', 'squalane',
+        // plus a long INCI tail the page would naturally include
+        'cetearyl alcohol', 'caprylic capric triglyceride', 'phenoxyethanol',
+        'dimethicone', 'tocopherol', 'sodium hyaluronate', 'carbomer',
+        'disodium edta', 'xanthan gum', 'panthenol', 'arginine',
+        'butylene glycol', 'citric acid', 'sodium hydroxide',
+      ],
+    };
+    const r = resolveItem(longSighting, catalog, BRANDS);
+    expect(r?.productId).toBe('prod-B');
+  });
 });

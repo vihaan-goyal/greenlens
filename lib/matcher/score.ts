@@ -18,7 +18,7 @@ export const FEATURE_WEIGHTS: Record<FeatureKey, number> = {
   nameJaroWinkler: 2.0,
   nameTokenSet: 1.5,
   brandMatch: 2.5,
-  ingredientsJaccard: 3.0,
+  ingredientsOverlap: 3.0,
   sizeMatch: 1.0,
 };
 

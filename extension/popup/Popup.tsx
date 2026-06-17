@@ -1,9 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ContentState, ContentToPopup, VerdictPayload } from '../shared/messages';
-import { AXES, AXIS_LABEL, FUNDING_LABEL, type Pillars, type Weights } from '@/lib/domain/types';
+import {
+  AXES,
+  AXIS_LABEL,
+  FUNDING_LABEL,
+  type IngredientFlag,
+  type IngredientStance,
+  type Pillars,
+  type Weights,
+} from '@/lib/domain/types';
 import { defaultWeights, overall, overallRange, topMarginalDriver } from '@/lib/domain/scoring';
 import { VERDICT_LABEL, VERDICT_VAR, verdictBand } from '@/lib/domain/verdict';
 import { Sonion, type SonionMood } from '@/components/Sonion';
+
+/** Where we are inside the popup. Two screens, no real router. */
+type Nav = { kind: 'verdict' } | { kind: 'flag'; slug: string };
 
 const WEIGHTS_KEY = 'greenlens.weights';
 
@@ -22,6 +33,7 @@ const WEIGHTS_KEY = 'greenlens.weights';
 export function Popup() {
   const [tabState, setTabState] = useState<ContentState | null>(null);
   const [weights, setWeights] = useState<Weights>(defaultWeights);
+  const [nav, setNav] = useState<Nav>({ kind: 'verdict' });
   const writeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load persisted weights.
@@ -73,6 +85,16 @@ export function Popup() {
   const verdict = tabState?.kind === 'verdict' ? tabState.payload : null;
   const mood = headerMood(verdict?.pillars, weights);
 
+  // Flag detail screen takes over the popup — no header chrome, no weight
+  // controls. Returns the user to the verdict via the back button.
+  if (nav.kind === 'flag' && verdict) {
+    const flag = verdict.flags.find((f) => f.slug === nav.slug);
+    if (flag) {
+      return <FlagDetailScreen flag={flag} onBack={() => setNav({ kind: 'verdict' })} />;
+    }
+    // Flag missing — fall back to verdict.
+  }
+
   return (
     <main>
       <header className="gl-header">
@@ -86,7 +108,11 @@ export function Popup() {
       {tabState === null && <section className="gl-section gl-blank" />}
 
       {tabState?.kind === 'verdict' && (
-        <ProductPanel payload={tabState.payload} weights={weights} />
+        <ProductPanel
+          payload={tabState.payload}
+          weights={weights}
+          onOpenFlag={(slug) => setNav({ kind: 'flag', slug })}
+        />
       )}
 
       {tabState?.kind === 'unknown' && <UnknownBlock rawName={tabState.rawName} />}
@@ -122,7 +148,15 @@ export function Popup() {
 
 // ─── product panel ─────────────────────────────────────────────────────────
 
-function ProductPanel({ payload, weights }: { payload: VerdictPayload; weights: Weights }) {
+function ProductPanel({
+  payload,
+  weights,
+  onOpenFlag,
+}: {
+  payload: VerdictPayload;
+  weights: Weights;
+  onOpenFlag: (slug: string) => void;
+}) {
   const o = overall(payload.pillars, weights);
   const range = overallRange(payload.pillars, weights);
   const band = verdictBand(o);
@@ -159,13 +193,29 @@ function ProductPanel({ payload, weights }: { payload: VerdictPayload; weights: 
       )}
 
       {AXES.map((axis) => (
-        <PillarRow key={axis} pillars={payload.pillars} axis={axis} />
+        <PillarRow
+          key={axis}
+          pillars={payload.pillars}
+          axis={axis}
+          flags={axis === 'ingredient_safety' ? payload.flags : []}
+          onOpenFlag={onOpenFlag}
+        />
       ))}
     </section>
   );
 }
 
-function PillarRow({ pillars, axis }: { pillars: Pillars; axis: keyof Pillars }) {
+function PillarRow({
+  pillars,
+  axis,
+  flags,
+  onOpenFlag,
+}: {
+  pillars: Pillars;
+  axis: keyof Pillars;
+  flags: IngredientFlag[];
+  onOpenFlag: (slug: string) => void;
+}) {
   const p = pillars[axis];
   const band = verdictBand(p.representative);
   const color = band ? VERDICT_VAR[band] : 'var(--ink-3)';
@@ -213,9 +263,111 @@ function PillarRow({ pillars, axis }: { pillars: Pillars; axis: keyof Pillars })
           ))}
         </ul>
       )}
+
+      {flags.length > 0 && (
+        <div className="gl-flagchips">
+          <p className="gl-flagchips-label">Specifically</p>
+          {flags.map((f) => (
+            <button
+              key={f.slug}
+              type="button"
+              className="gl-flagchip"
+              onClick={() => onOpenFlag(f.slug)}
+              aria-label={`Open per-rater detail for ${f.name}`}
+            >
+              <span className="gl-flagchip-name">{f.name}</span>
+              <span className="gl-flagchip-meta">{flagSplitLabel(f)}</span>
+              <span className="gl-flagchip-chev" aria-hidden>›</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+/** A one-word summary of what the raters did on this ingredient. */
+function flagSplitLabel(f: IngredientFlag): string {
+  const stances = new Set(f.positions.map((p) => p.stance));
+  if (stances.size <= 1) return 'Raters agree';
+  if (stances.has('concern')) return 'Raters split (concern)';
+  return 'Raters split';
+}
+
+// ─── flag detail screen ────────────────────────────────────────────────────
+// The thesis screen. One ingredient, every rater's stance, every funding
+// model, every reasoning sentence. Never blended.
+
+function FlagDetailScreen({ flag, onBack }: { flag: IngredientFlag; onBack: () => void }) {
+  return (
+    <main>
+      <header className="gl-flag-head">
+        <button
+          type="button"
+          className="gl-flag-back"
+          onClick={onBack}
+          aria-label="Back to verdict"
+        >
+          <span aria-hidden>‹</span> Back
+        </button>
+        <p className="gl-eyebrow">Ingredient flag</p>
+        <h2 className="gl-flag-name">{flag.name}</h2>
+      </header>
+
+      <section className="gl-section">
+        <p className="gl-flag-explanation">{flag.explanation}</p>
+      </section>
+
+      <section className="gl-section">
+        <p className="gl-eyebrow">Where each rater lands</p>
+        <ul className="gl-rater-positions">
+          {flag.positions.map((p) => (
+            <li key={p.sourceId} className="gl-rater-position">
+              <header className="gl-rater-position-head">
+                <span
+                  className="gl-stance-dot"
+                  data-stance={p.stance}
+                  aria-hidden
+                />
+                <span className="gl-rater-position-source">{p.sourceName}</span>
+                <span className="gl-rater-position-stance" data-stance={p.stance}>
+                  {STANCE_LABEL[p.stance]}
+                </span>
+                <span className="gl-rater-funding">{FUNDING_LABEL[p.fundingModel]}</span>
+              </header>
+              <p className="gl-rater-position-reasoning">{p.reasoning}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {flag.notes.length > 0 && (
+        <section className="gl-section">
+          <p className="gl-eyebrow">Other notes</p>
+          <ul className="gl-notes">
+            {flag.notes.map((n, i) => (
+              <li key={i} className="gl-note">
+                <span
+                  className="gl-note-dot"
+                  style={{ background: VERDICT_VAR[n.band] }}
+                  aria-hidden
+                />
+                <span>{n.label}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </main>
+  );
+}
+
+const STANCE_LABEL: Record<IngredientStance, string> = {
+  concern: 'Concern',
+  caution: 'Caution',
+  safe: 'Safe',
+  unknown: 'Unknown',
+};
 
 // ─── verdict ring (popup-scaled, simpler than ScoreRing) ───────────────────
 

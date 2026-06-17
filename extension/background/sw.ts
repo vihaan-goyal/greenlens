@@ -8,6 +8,8 @@ import type { ProductView } from '@/lib/data/repository';
 import { resolveItem, type CatalogEntry } from '@/lib/matcher/matcher';
 import type { MatchableItem } from '@/lib/matcher/features';
 
+console.log('[greenlens/sw] build', __GL_BUILD__);
+
 const WEIGHTS_KEY = 'greenlens.weights';
 
 async function readWeights(): Promise<Weights> {
@@ -59,15 +61,22 @@ async function resolveSighting(s: RawProductSighting): Promise<VerdictPayload | 
   const views = await mockRepository.listProducts();
   const brands = collectBrands(views);
   const catalog = views.map(viewToCatalog);
-  const match = resolveItem(sightingToMatchable(s), catalog, brands);
+  const item = sightingToMatchable(s);
+
+  const match = resolveItem(item, catalog, brands);
   if (!match) return null;
   const view = views.find((v) => v.product.id === match.productId);
   if (!view) return null;
+  // Flags are fetched eagerly so the popup never has to do a follow-up round
+  // trip — they're small per-product, and we want the flag chips to render
+  // the moment the verdict screen appears.
+  const flags = await mockRepository.listIngredientFlags(view.product.id);
   return {
     product: view.product,
     brand: view.brand,
     pillars: view.pillars,
     sources: view.sources,
+    flags,
     matchConfidence: match.confidence,
   };
 }

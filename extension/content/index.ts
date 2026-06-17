@@ -1,7 +1,16 @@
 import { pickAdapter } from './adapters';
 import { sendToBackground } from '../shared/messages';
 import type { BgToContent, PopupToContent } from '../shared/messages';
-import { getContentState, mountCard, mountIdle, mountUnknown, updateCard } from './card/mount';
+import {
+  ensureIdle,
+  getContentState,
+  mountCard,
+  mountIdle,
+  mountUnknown,
+  updateCard,
+} from './card/mount';
+
+console.log('[greenlens] content script build', __GL_BUILD__);
 
 /**
  * Content-script entry. Runs in the page world at document_idle. Responsibilities:
@@ -15,20 +24,22 @@ import { getContentState, mountCard, mountIdle, mountUnknown, updateCard } from 
  */
 
 async function run(url: string) {
-  // Always have Sonion on screen between meaningful states. The card upgrades
-  // to a verdict/unknown panel the moment we land on a product page; while
-  // the user browses search results or a category page he sits quietly in
-  // the corner so they know the extension is alive.
-  mountIdle();
+  // First time on a tab: nothing's mounted, so Sonion has to appear from
+  // somewhere — idle is the right default. On subsequent navigations we keep
+  // whatever card is already up while we re-resolve, so users don't see a
+  // verdict flash back to idle and then to a new verdict.
+  ensureIdle();
 
   const adapter = pickAdapter(url);
   if (!adapter) {
     console.debug('[greenlens] no adapter for', url);
+    mountIdle(); // not a product page → force back to idle even if a verdict was up
     return;
   }
   const sighting = adapter.extract(document, url);
   if (!sighting) {
     console.debug('[greenlens] adapter found no product on', url);
+    mountIdle();
     return;
   }
   console.debug('[greenlens] sighting', sighting);

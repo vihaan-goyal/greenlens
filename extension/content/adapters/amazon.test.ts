@@ -157,6 +157,79 @@ describe('amazonAdapter.extract (Chanel fragrance fixture)', () => {
   });
 });
 
+describe('amazonAdapter.extract (Drunk Elephant — no #bylineInfo, no ingredients)', () => {
+  const doc = docFrom(fixture('amazon-drunk-elephant.html'));
+  const url = 'https://www.amazon.com/dp/B07934S6WK';
+  const sighting = amazonAdapter.extract(doc, url)!;
+
+  it('falls back to #visitStoreLink for the brand when #bylineInfo is missing', () => {
+    expect(sighting.rawBrand).toBe('Drunk Elephant');
+  });
+
+  it('still reads the real breadcrumb (priority order picks wayfinding over nav-subnav)', () => {
+    expect(sighting.category?.[0]).toBe('Beauty & Personal Care');
+    expect(sighting.category).toContain('Face Moisturizers');
+  });
+
+  it('degrades without ingredients or GTIN (Drunk Elephant does not publish them here)', () => {
+    expect(sighting.rawIngredients).toEqual([]);
+    expect(sighting.rawGtin).toBeUndefined();
+  });
+});
+
+describe('amazonAdapter — brand fallback chain', () => {
+  it('reads brand from "Brand" row when no byline link exists at all', () => {
+    const doc = docFrom(
+      `<html><body>
+         <span id="productTitle">Some Cream</span>
+         <table>
+           <tr><th>Brand</th><td>Mystery Brand</td></tr>
+         </table>
+       </body></html>`,
+    );
+    expect(amazonAdapter.extract(doc, 'https://www.amazon.com/dp/B0')?.rawBrand).toBe(
+      'Mystery Brand',
+    );
+  });
+
+  it('prefers #bylineInfo over later fallbacks when both exist', () => {
+    const doc = docFrom(
+      `<html><body>
+         <span id="productTitle">X</span>
+         <span id="bylineInfo">Visit the FirstBrand Store</span>
+         <a id="visitStoreLink" href="/stores/SecondBrand/">Visit the SecondBrand Store</a>
+         <table><tr><th>Brand</th><td>ThirdBrand</td></tr></table>
+       </body></html>`,
+    );
+    expect(amazonAdapter.extract(doc, 'https://www.amazon.com/dp/B0')?.rawBrand).toBe(
+      'FirstBrand',
+    );
+  });
+});
+
+describe('amazonAdapter — GTIN scoping (sidebar contamination)', () => {
+  it('reads UPC from the main product details, not the cart sidebar', () => {
+    const doc = docFrom(fixture('amazon-with-sidebar-upc.html'));
+    const sighting = amazonAdapter.extract(doc, 'https://www.amazon.com/dp/B0')!;
+    // 999123456789 is the main product's UPC; 086556004739 is the sidebar.
+    expect(sighting.rawGtin).toBe('999123456789');
+    expect(sighting.rawGtin).not.toBe('086556004739');
+  });
+
+  it('returns no GTIN when the only UPC on the page is in an unknown container', () => {
+    // No #detailBullets_feature_div, #productDetails_*, etc. — just a
+    // sidebar with a UPC. Better to return undefined than a wrong UPC.
+    const doc = docFrom(
+      `<html><body>
+         <span id="productTitle">Real Product</span>
+         <aside><table><tr><th>UPC</th><td>012345678905</td></tr></table></aside>
+       </body></html>`,
+    );
+    const sighting = amazonAdapter.extract(doc, 'https://www.amazon.com/dp/B0')!;
+    expect(sighting.rawGtin).toBeUndefined();
+  });
+});
+
 describe('amazonAdapter — byline strip variants', () => {
   const url = 'https://www.amazon.com/dp/B0';
   const wrap = (byline: string) =>

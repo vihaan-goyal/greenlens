@@ -33,9 +33,19 @@ export interface FeatureScores {
   nameTokenSet?: number;
   /** Canonical brand match after alias resolution. */
   brandMatch?: boolean;
-  /** Jaccard over normalized ingredient sets. Available only when both
-   *  sides list ≥3 ingredients — fewer than that is too noisy. */
-  ingredientsJaccard?: number;
+  /**
+   * Szymkiewicz-Simpson overlap coefficient over normalized ingredient sets:
+   * |A ∩ B| / min(|A|, |B|). Available only when both sides list ≥5
+   * ingredients — fewer than that is too noisy and too forgiving.
+   *
+   * We use overlap instead of Jaccard because the catalog typically holds a
+   * shorter canonical ingredient list, while real-world Amazon pages publish
+   * the full INCI with many synonyms and inactive carriers. Jaccard punishes
+   * that size mismatch even when the catalog's list is fully contained in
+   * the page's; overlap rewards the containment, which is the actual
+   * "same product" signal.
+   */
+  ingredientsOverlap?: number;
   /** Same numeric size, same unit family (ml↔ml, oz↔oz). */
   sizeMatch?: boolean;
 }
@@ -68,7 +78,13 @@ export function computeFeatures(
 
   const gA = normalizeGtin(a.gtin);
   const gB = normalizeGtin(b.gtin);
-  if (gA && gB) out.gtinExact = gA === gB;
+  // Asymmetric on purpose: a TRUE GTIN match is strong positive evidence of
+  // same product (and earns the heaviest feature weight in score.ts). A FALSE
+  // non-match is *not* strong negative evidence — Amazon assigns different
+  // UPCs to product variants (refills, size SKUs, region packs) that are
+  // still the same canonical product. So on mismatch we omit the feature
+  // entirely and let brand + name + ingredients decide.
+  if (gA && gB && gA === gB) out.gtinExact = true;
 
   const nA = normalizeName(a.name);
   const nB = normalizeName(b.name);
@@ -85,12 +101,13 @@ export function computeFeatures(
 
   if (
     a.ingredients && b.ingredients &&
-    a.ingredients.length >= 3 && b.ingredients.length >= 3
+    a.ingredients.length >= 5 && b.ingredients.length >= 5
   ) {
-    out.ingredientsJaccard = jaccard(
-      new Set(a.ingredients.map(normalizeIngredient).filter(Boolean)),
-      new Set(b.ingredients.map(normalizeIngredient).filter(Boolean)),
-    );
+    const aSet = new Set(a.ingredients.map(normalizeIngredient).filter(Boolean));
+    const bSet = new Set(b.ingredients.map(normalizeIngredient).filter(Boolean));
+    if (aSet.size >= 5 && bSet.size >= 5) {
+      out.ingredientsOverlap = overlapCoefficient(aSet, bSet);
+    }
   }
 
   if (
@@ -162,4 +179,15 @@ export function jaccard<T>(a: Set<T>, b: Set<T>): number {
   for (const x of a) if (b.has(x)) intersection++;
   const union = a.size + b.size - intersection;
   return union === 0 ? 0 : intersection / union;
+}
+
+/**
+ * Szymkiewicz-Simpson overlap coefficient — see ingredientsOverlap above for
+ * why this beats Jaccard for asymmetric set comparisons.
+ */
+export function overlapCoefficient<T>(a: Set<T>, b: Set<T>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let intersection = 0;
+  for (const x of a) if (b.has(x)) intersection++;
+  return intersection / Math.min(a.size, b.size);
 }

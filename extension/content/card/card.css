@@ -23,11 +23,26 @@
 .gl-trigger:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
 .gl-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* Idle state — just Sonion in a tighter circle, no text. Animations land here. */
+/* Idle state — just Sonion in a tighter circle, no text. */
 .gl-trigger-idle {
   padding: 4px;
   gap: 0;
   cursor: default;
+}
+
+/* Sonion's idle bob. .anim-drift is set on the Sonion wrapper by /components/Sonion;
+   the class lives in app/globals.css for the Next.js side, so re-declare it here
+   inside the shadow root. */
+@keyframes drift {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+.anim-drift {
+  animation: drift 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-drift { animation: none; }
 }
 
 .gl-trigger-text {

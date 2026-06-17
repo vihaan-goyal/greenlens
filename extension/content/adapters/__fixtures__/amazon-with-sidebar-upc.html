@@ -1,0 +1,38 @@
+<!--
+  Trimmed Amazon snapshot that mirrors a real failure mode: a cart sidebar
+  (top-right of the page) shows a totally unrelated product with its own
+  UPC label. An earlier version of the adapter scanned every <li> and <tr>
+  in the document and picked up the SIDEBAR UPC instead of the main
+  product's — which then poisoned the matcher (gtinExact: false → 6.0
+  weight × 0 outcome, dragging the score below threshold).
+
+  This fixture asserts the adapter only reads UPC from known
+  product-information containers and ignores the sidebar.
+-->
+<!doctype html>
+<html>
+  <head><title>Amazon main product</title></head>
+  <body>
+    <div id="centerCol">
+      <h1 id="title"><span id="productTitle">Acme Hydrating Serum 30ml</span></h1>
+      <a id="bylineInfo">Visit the Acme Store</a>
+    </div>
+
+    <!-- Sidebar carousel — unrelated product with its own UPC. The adapter
+         must NOT pick this up. -->
+    <aside id="cartSidebarPanel">
+      <table>
+        <tr><th>UPC</th><td>086556004739</td></tr>
+        <tr><th>Title</th><td>Some Notebook</td></tr>
+      </table>
+    </aside>
+
+    <!-- Real product info — adapter should pick up THIS UPC -->
+    <div id="detailBullets_feature_div">
+      <ul>
+        <li><span><b>UPC</b> : 999123456789</span></li>
+        <li><span><b>Item model number</b> : ACME-30</span></li>
+      </ul>
+    </div>
+  </body>
+</html>

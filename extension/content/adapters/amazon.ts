@@ -36,15 +36,7 @@ export const amazonAdapter: SiteAdapter = {
     const rawName = text(doc, ['#productTitle', '#title']);
     if (!rawName) return null;
 
-    // Byline shapes we've seen in fixtures:
-    //   "Visit the Maybelline Store"  → strip "Visit the " prefix + " Store" suffix
-    //   "Brand: Chanel"               → strip "Brand: " prefix
-    //   "by SomeBrand"                → strip "by " prefix
-    //   "CeraVe"                      → unchanged
-    const rawBrand = text(doc, ['#bylineInfo'])
-      ?.replace(/^(?:visit the |brand:\s*|by\s+)/i, '')
-      ?.replace(/\s+store$/i, '')
-      ?.trim();
+    const rawBrand = readBrand(doc);
 
     const category = breadcrumbs(doc);
     const rawIngredients = ingredients(doc);
@@ -95,6 +87,60 @@ function attr(doc: Document, selector: string, name: string): string | undefined
 
 function clean(s: string): string {
   return s.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Brand extraction with a fallback cascade. Amazon ships several layouts;
+ * `#bylineInfo` is the most common, but the modern brand-store layout
+ * (seen on Drunk Elephant and other premium DTC brands) omits it entirely
+ * and renders the byline as `#visitStoreLink`. As a last resort we read the
+ * "Brand" row in the product details table.
+ *
+ * Strip patterns we've seen on these byline shapes:
+ *   "Visit the Maybelline Store"  → strip "Visit the " prefix + " Store" suffix
+ *   "Brand: Chanel"               → strip "Brand: " prefix
+ *   "by SomeBrand"                → strip "by " prefix
+ *   "CeraVe"                      → unchanged
+ */
+function readBrand(doc: Document): string | undefined {
+  const strip = (s: string) =>
+    s
+      .replace(/^(?:visit the |brand:\s*|by\s+)/i, '')
+      .replace(/\s+store$/i, '')
+      .trim();
+
+  // 1. Common byline IDs, in priority order.
+  for (const sel of ['#bylineInfo', '#visitStoreLink']) {
+    const t = doc.querySelector(sel)?.textContent?.trim();
+    if (t) {
+      const cleaned = strip(t);
+      if (cleaned) return cleaned;
+    }
+  }
+
+  // 2. Any link into a brand store — the visible text is usually the byline.
+  for (const a of Array.from(doc.querySelectorAll('a[href*="/stores/"]'))) {
+    const t = a.textContent?.trim();
+    if (!t) continue;
+    // Filter out images/icons whose text is empty — already handled above —
+    // and short navigation links unrelated to byline.
+    if (t.length < 3 || t.length > 80) continue;
+    const cleaned = strip(t);
+    if (cleaned) return cleaned;
+  }
+
+  // 3. Product details table — "Brand" row.
+  for (const row of Array.from(doc.querySelectorAll('tr'))) {
+    const cells = row.querySelectorAll('th, td');
+    if (cells.length < 2) continue;
+    const label = (cells[0]?.textContent ?? '').trim().toLowerCase();
+    if (label === 'brand') {
+      const v = cells[1]?.textContent?.trim();
+      if (v) return v;
+    }
+  }
+
+  return undefined;
 }
 
 /**
@@ -172,9 +218,14 @@ function readIngredientContainer(el: Element): string[] {
 }
 
 function splitIngredients(raw: string): string[] {
+  // Split only on real separators. An earlier version also split on `)`
+  // followed by whitespace and an uppercase letter (for pages that omit
+  // commas between INCI names) — but that shreds inline parens like
+  // "Pyrus Malus (Apple) Fruit Extract" into two non-matching tokens, which
+  // broke the matcher on real brand pages.
   return raw
     .replace(/\s+/g, ' ')
-    .split(/[,•·]|(?<=\))\s+(?=[A-Z])/)
+    .split(/[,•·]/)
     .map((s) => s.trim().toLowerCase())
     .filter((s) => s.length >= 2 && s.length <= 120);
 }
@@ -188,26 +239,50 @@ function splitIngredients(raw: string): string[] {
 function gtinFromDetails(doc: Document): string | undefined {
   const labels = ['upc', 'ean', 'gtin', 'isbn'];
 
-  // Strategy 1: structured table row. Read the value cell directly so we
-  // don't depend on textContent including separators between label and value
-  // (Amazon's `#productDetails_techSpec_section_1` joins them as "UPC<digits>").
-  for (const row of Array.from(doc.querySelectorAll('tr'))) {
-    const cells = row.querySelectorAll('th, td');
-    if (cells.length < 2) continue;
-    const label = (cells[0]?.textContent ?? '').trim().toLowerCase();
-    if (!labels.some((l) => label === l || label.startsWith(l + ' '))) continue;
-    const value = (cells[1]?.textContent ?? '').replace(/\s+/g, '');
-    const match = value.match(/\d{8,14}/);
-    if (match) return match[0];
-  }
+  // CRITICAL: only scan inside known product-detail containers, never the
+  // whole document. Scanning everywhere makes the adapter pick up UPCs from
+  // the cart sidebar, "Related items" carousel, "Compare to similar items"
+  // table, sponsored ads, etc. — and tagging a wrong UPC onto the sighting
+  // is worse than no UPC at all, because the matcher then sees
+  // `gtinExact: false` and the 6.0 weight drags the composite score below
+  // threshold even when brand + name agree.
+  const PRODUCT_INFO_CONTAINERS = [
+    '#productDetails_feature_div',
+    '#productDetails_techSpec_section_1',
+    '#productDetails_techSpec_section_2',
+    '#productDetails_detailBullets_sections1',
+    '#detailBullets_feature_div',
+    '#prodDetails',
+    '#productDetailsTable',
+    '#technicalSpecifications_feature_div',
+    '#important-information',
+  ];
 
-  // Strategy 2: bullet list. Here textContent typically separates "UPC" and
-  // digits with " : ", so a textContent scan is fine.
-  for (const row of Array.from(doc.querySelectorAll('li'))) {
-    const txt = (row.textContent ?? '').toLowerCase();
-    if (!labels.some((l) => txt.includes(l))) continue;
-    const match = (row.textContent ?? '').match(/\b\d{8,14}\b/);
-    if (match) return match[0];
+  for (const containerSel of PRODUCT_INFO_CONTAINERS) {
+    const container = doc.querySelector(containerSel);
+    if (!container) continue;
+
+    // Structured table row: read the value cell directly so we don't depend
+    // on textContent including separators between label and value (Amazon's
+    // tech-spec table joins them as "UPC<digits>" with no whitespace).
+    for (const row of Array.from(container.querySelectorAll('tr'))) {
+      const cells = row.querySelectorAll('th, td');
+      if (cells.length < 2) continue;
+      const label = (cells[0]?.textContent ?? '').trim().toLowerCase();
+      if (!labels.some((l) => label === l || label.startsWith(l + ' '))) continue;
+      const value = (cells[1]?.textContent ?? '').replace(/\s+/g, '');
+      const match = value.match(/\d{8,14}/);
+      if (match) return match[0];
+    }
+
+    // Bullet list: textContent here typically separates label and digits
+    // with " : " so a textContent scan is fine.
+    for (const row of Array.from(container.querySelectorAll('li'))) {
+      const txt = (row.textContent ?? '').toLowerCase();
+      if (!labels.some((l) => txt.includes(l))) continue;
+      const match = (row.textContent ?? '').match(/\b\d{8,14}\b/);
+      if (match) return match[0];
+    }
   }
 
   return undefined;
