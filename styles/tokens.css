@@ -1,0 +1,20 @@
+:root {
+  --bg: #ECE5D8;
+  --card: #FBF9F4;
+  --card-2: #F4EFE5;
+
+  --ink: #2E2A22;
+  --ink-2: #6E675A;
+  --ink-3: #A79E8C;
+
+  --line: #E4DBCB;
+  --espresso: #3A342B;
+  --sand: #E7DFCF;
+  --accent: #7C8466;
+
+  --verdict-excellent: #5E7B53;
+  --verdict-good: #8A9A5E;
+  --verdict-fair: #B5904A;
+  --verdict-poor: #BC8255;
+  --verdict-bad: #B0655A;
+}
