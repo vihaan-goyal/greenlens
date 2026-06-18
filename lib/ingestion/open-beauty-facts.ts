@@ -255,6 +255,28 @@ export interface IngestResult {
 }
 
 /**
+ * Normalize → match an *already-fetched* product. This is the fetch-free core of
+ * ingestion, so a bulk job that pulls full product records from the search API
+ * (100 per request) can reuse the exact same pipeline as the single-barcode path
+ * without an extra HTTP round-trip per product. `raw` is stored verbatim as the
+ * Listing payload, so callers should pass the same `{ status, product }` envelope
+ * a barcode lookup returns to keep payloads uniform for later re-processing.
+ */
+export function ingestProduct(
+  product: ObfProduct,
+  raw: unknown,
+  catalog: ReadonlyArray<CatalogEntry>,
+  brands: ReadonlyArray<Brand>,
+  opts: { now?: Date } = {},
+): IngestResult {
+  const listing = normalizeListing(product, raw, opts);
+  const ratings = extractRatings(product, listing.id, opts);
+  const item = toMatchableItem(product);
+  const match = resolveItem(item, catalog, brands);
+  return { listing, ratings, match, item, category: extractCategory(product) };
+}
+
+/**
  * Full ingestion for one barcode: fetch → validate → normalize → run the matcher
  * against the supplied canonical catalog. Returns null when OBF has no product.
  */
@@ -266,11 +288,5 @@ export async function ingestBarcode(
 ): Promise<IngestResult | null> {
   const fetched = await fetchOpenBeautyFacts(barcode, opts);
   if (!fetched) return null;
-
-  const listing = normalizeListing(fetched.product, fetched.raw, opts);
-  const ratings = extractRatings(fetched.product, listing.id, opts);
-  const item = toMatchableItem(fetched.product);
-  const match = resolveItem(item, catalog, brands);
-
-  return { listing, ratings, match, item, category: extractCategory(fetched.product) };
+  return ingestProduct(fetched.product, fetched.raw, catalog, brands, opts);
 }
