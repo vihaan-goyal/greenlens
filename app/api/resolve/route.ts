@@ -44,6 +44,23 @@ interface SightingBody {
 const asString = (v: unknown): string | undefined =>
   typeof v === 'string' && v.trim() ? v.trim() : undefined;
 
+// The match context (every product + brand in the matcher's shape) is the same
+// for every sighting and is the expensive part — a full-catalog read that grows
+// with ingestion. Cache it briefly so a burst of page views doesn't re-scan the
+// whole table each time. The TTL keeps it fresh enough to pick up new ingests
+// within a minute; the matched product itself is always read live (uncached).
+type MatchContext = Awaited<ReturnType<typeof repository.loadMatchContext>>;
+const CONTEXT_TTL_MS = 30_000;
+let contextCache: { at: number; data: MatchContext } | null = null;
+
+async function loadMatchContextCached(): Promise<MatchContext> {
+  const now = Date.now();
+  if (contextCache && now - contextCache.at < CONTEXT_TTL_MS) return contextCache.data;
+  const data = await repository.loadMatchContext();
+  contextCache = { at: now, data };
+  return data;
+}
+
 export async function POST(req: Request) {
   let body: SightingBody;
   try {
@@ -71,7 +88,7 @@ export async function POST(req: Request) {
     ingredients: ingredients && ingredients.length ? ingredients : undefined,
   };
 
-  const { catalog, brands } = await repository.loadMatchContext();
+  const { catalog, brands } = await loadMatchContextCached();
   const match = resolveItem(item, catalog, brands);
   if (!match) return NextResponse.json({ match: null }, { headers: CORS });
 
