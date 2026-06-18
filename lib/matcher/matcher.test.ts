@@ -290,4 +290,28 @@ describe('matcher / resolveItem — live extension lookup', () => {
     const r = resolveItem(marketingTitle, catalog, BRANDS);
     expect(r?.productId).toBe('prod-A');
   });
+
+  it('does not flag a clean win as ambiguous', () => {
+    const r = resolveItem(LISTINGS.find((l) => l.id === 'B-stripped')!, catalog, BRANDS);
+    expect(r?.productId).toBe('prod-B');
+    expect(r?.ambiguous).toBe(false);
+  });
+
+  // Precision guard: two same-brand siblings ("Glow Serum" vs "Glow Serum Plus")
+  // can both clear the threshold for a vague title. The matcher still returns the
+  // best one (recall preserved) but marks it ambiguous so the UI can hedge rather
+  // than confidently present a near-coin-flip.
+  it('flags ambiguity when a different product scores within the margin', () => {
+    // Two near-duplicate canonical entries (same name, different productId) — the
+    // exact "are these the same product?" gap. Both score alike for the sighting,
+    // so the winner is within the margin of a different product → ambiguous.
+    const siblings: CatalogEntry[] = [
+      { productId: 'prod-glow', id: 'cat-glow', brand: 'BigA', name: 'Daily Glow Serum' },
+      { productId: 'prod-glow-dup', id: 'cat-glow-dup', brand: 'BigA', name: 'Daily Glow Serum' },
+    ];
+    const vague: MatchableItem = { id: 'sighting', brand: 'BigA', name: 'BigA Daily Glow Serum' };
+    const r = resolveItem(vague, siblings, BRANDS);
+    expect(r).not.toBeNull();
+    expect(r!.ambiguous).toBe(true);
+  });
 });

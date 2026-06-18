@@ -5,12 +5,15 @@
 // the *full* Prisma catalog (thousands of ingested products, not the 17-item
 // mock the extension bundles) and returns the verdict for the matched product.
 //
-// Always hits prismaRepository directly — the whole point is the full DB — so it
-// works regardless of GREENLENS_REPO. Needs the Node runtime (Prisma) and must
-// never be statically cached (the catalog grows as you ingest).
+// Reads through the shared `repository` accessor — the SAME catalog the UI
+// renders — so a match here always resolves to a product the "see full
+// breakdown" page can load. Run the app with GREENLENS_REPO=prisma (npm run
+// dev:full) to match against the full ingested catalog; plain `npm run dev`
+// matches the 17-product seed. Needs the Node runtime (Prisma) and must never be
+// statically cached (the catalog grows as you ingest).
 
 import { NextResponse } from 'next/server';
-import { prismaRepository } from '@/lib/data/prisma-repository';
+import { repository } from '@/lib/data';
 import { resolveItem } from '@/lib/matcher/matcher';
 import type { MatchableItem } from '@/lib/matcher/features';
 import type { VerdictPayload } from '@/extension/shared/messages';
@@ -68,13 +71,13 @@ export async function POST(req: Request) {
     ingredients: ingredients && ingredients.length ? ingredients : undefined,
   };
 
-  const { catalog, brands } = await prismaRepository.loadMatchContext();
+  const { catalog, brands } = await repository.loadMatchContext();
   const match = resolveItem(item, catalog, brands);
   if (!match) return NextResponse.json({ match: null }, { headers: CORS });
 
-  const view = await prismaRepository.getProduct(match.productId);
+  const view = await repository.getProduct(match.productId);
   if (!view) return NextResponse.json({ match: null }, { headers: CORS });
-  const flags = await prismaRepository.listIngredientFlags(match.productId);
+  const flags = await repository.listIngredientFlags(match.productId);
 
   const payload: VerdictPayload = {
     product: view.product,
@@ -83,6 +86,7 @@ export async function POST(req: Request) {
     sources: view.sources,
     flags,
     matchConfidence: match.confidence,
+    ambiguous: match.ambiguous,
   };
   return NextResponse.json({ match: payload }, { headers: CORS });
 }

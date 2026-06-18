@@ -1,4 +1,5 @@
 import type { Axis, Brand, IngredientFlag, Pillars, Product, Source } from '../domain/types';
+import type { CatalogEntry } from '../matcher/matcher';
 
 /**
  * What a product looks like after the raw Listings + Ratings have been rolled
@@ -32,4 +33,11 @@ export interface ProductRepository {
   listAlternatives(productId: string): Promise<AlternativeView[]>;
   getIngredientFlag(productId: string, slug: string): Promise<IngredientFlag | null>;
   listIngredientFlags(productId: string): Promise<IngredientFlag[]>;
+  /**
+   * Snapshot the whole catalog + brands in the matcher's shapes, for resolving a
+   * live sighting against the canonical products. Shared by the extension's
+   * resolve API so it matches against exactly the catalog the UI renders — match
+   * and breakdown can never disagree about which products exist.
+   */
+  loadMatchContext(): Promise<{ catalog: CatalogEntry[]; brands: Brand[] }>;
 }

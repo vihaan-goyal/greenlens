@@ -33,6 +33,12 @@ export interface VerdictPayload {
   flags: IngredientFlag[];
   /** 0..1, how confident the matcher is this is the right canonical product. */
   matchConfidence: number;
+  /**
+   * True when a different, similar product scored almost as well — the match is a
+   * best guess, not a sure thing. The card hedges ("closest match") so we never
+   * present a near-tie between similar products as certain.
+   */
+  ambiguous?: boolean;
 }
 
 export type BgToContent =
