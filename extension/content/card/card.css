@@ -8,24 +8,89 @@
 
 .gl-card * { box-sizing: border-box; }
 
+/* ── Floater (drag wrapper) ───────────────────────────────────────────── */
+/* The Floater sets `position: fixed` inline. Visual states are toggled via
+   classnames so we can drive cursor + magnet cues without inline juggling. */
+.gl-floater {
+  will-change: left, top, transform;
+}
+.gl-floater .gl-trigger {
+  cursor: grab;
+}
+/* While actively dragging — closed grip + slight scale + brighter halo */
+.gl-floater-dragging .gl-trigger {
+  cursor: grabbing;
+  transform: scale(1.03);
+  box-shadow:
+    0 0 0 9px var(--pop-tint),
+    0 6px 12px rgba(46, 42, 34, 0.18),
+    0 26px 50px -10px rgba(46, 42, 34, 0.48);
+}
+/* Near the home corner during drag — gentle pulse hints the magnet is on */
+.gl-floater-near-home .gl-trigger {
+  animation: gl-magnet 700ms ease-in-out infinite;
+}
+@keyframes gl-magnet {
+  0%, 100% { transform: scale(1.03); }
+  50%      { transform: scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gl-floater-near-home .gl-trigger { animation: none; }
+}
+
+/* ── verdict-keyed pop color ──────────────────────────────────────────────
+   The trigger pill needs to read on white Amazon pages, so we paint a
+   verdict-colored ring + halo around the warm cream surface. Each band
+   sets its own --pop-color (solid ring) and --pop-tint (haze) here, then
+   .gl-trigger uses them in border + multi-layer box-shadow. */
+.gl-card {
+  --pop-color: var(--ink-2);
+  --pop-tint:  rgba(46, 42, 34, 0.10);
+}
+.gl-card[data-band="excellent"] { --pop-color: var(--verdict-excellent); --pop-tint: var(--halo-leaf);  }
+.gl-card[data-band="good"]      { --pop-color: var(--verdict-good);      --pop-tint: var(--halo-moss);  }
+.gl-card[data-band="fair"]      { --pop-color: var(--verdict-fair);      --pop-tint: var(--halo-amber); }
+.gl-card[data-band="poor"]      { --pop-color: var(--verdict-poor);      --pop-tint: var(--halo-clay);  }
+.gl-card[data-band="bad"]       { --pop-color: var(--verdict-bad);       --pop-tint: var(--halo-rose);  }
+
 .gl-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 14px 8px 8px;
+  gap: 12px;
+  padding: 10px 20px 10px 10px;
   background: var(--card);
-  border: 1px solid var(--line);
+  border: 2.5px solid var(--pop-color);
   border-radius: 999px;
-  box-shadow: var(--shadow-soft);
   cursor: pointer;
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 220ms ease,
+    border-color 220ms ease;
+  /* Three layers stack to make the pill sit forward on any background:
+     1) verdict-tinted halo (the glow that survives a white page),
+     2) tight close shadow for paper grounding,
+     3) far drop shadow for elevation against the page. */
+  box-shadow:
+    0 0 0 5px var(--pop-tint),
+    0 2px 4px rgba(46, 42, 34, 0.10),
+    0 16px 36px -12px rgba(46, 42, 34, 0.32);
 }
-.gl-trigger:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
-.gl-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gl-trigger:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 8px var(--pop-tint),
+    0 4px 8px rgba(46, 42, 34, 0.12),
+    0 22px 48px -10px rgba(46, 42, 34, 0.42);
+}
+.gl-trigger:focus-visible {
+  outline: 3px solid var(--pop-color);
+  outline-offset: 4px;
+}
 
-/* Idle state — just Sonion in a tighter circle, no text. */
+/* Idle state — just Sonion in a tighter circle, no text. The halo still
+   reads but at a calmer intensity. */
 .gl-trigger-idle {
-  padding: 4px;
+  padding: 5px;
   gap: 0;
   cursor: default;
 }
@@ -49,22 +114,33 @@
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
-  line-height: 1.1;
+  gap: 4px;
+  line-height: 1.05;
 }
 .gl-trigger-score {
   font-family: 'Fraunces', Georgia, serif;
-  font-size: 22px;
+  font-size: 32px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.035em;
+  line-height: 0.9;
 }
 .gl-trigger-band {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.22em;
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--card);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.20em;
   text-transform: uppercase;
-  color: var(--ink-3);
 }
+.gl-trigger-band[data-band="excellent"] { background: var(--verdict-excellent); }
+.gl-trigger-band[data-band="good"]      { background: var(--verdict-good); }
+.gl-trigger-band[data-band="fair"]      { background: var(--verdict-fair); }
+.gl-trigger-band[data-band="poor"]      { background: var(--verdict-poor); }
+.gl-trigger-band[data-band="bad"]       { background: var(--verdict-bad); }
 
 .gl-panel {
   margin-top: 10px;
@@ -118,26 +194,49 @@
 
 .gl-pillars {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 14px;
+  grid-template-columns: 1fr;
+  gap: 6px;
   margin: 0 0 12px;
   padding: 12px;
   background: var(--card-2);
-  border-radius: 12px;
+  border-radius: 14px;
 }
 .gl-pillar {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 12px;
 }
-.gl-pillar-label { color: var(--ink-2); }
+.gl-pillar-label {
+  color: var(--ink-2);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  flex: 0 0 auto;
+}
 .gl-pillar-num {
-  margin-left: auto;
+  font-family: 'Fraunces', Georgia, serif;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
+  font-size: 16px;
   color: var(--ink);
+  letter-spacing: -0.02em;
 }
+.gl-pillar-spacer { flex: 1 1 auto; }
+.gl-split-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--verdict-poor);
+  color: var(--card);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
+.gl-split-chip__arrow { opacity: 0.7; padding: 0 2px; }
 .gl-disagree {
   display: inline-block;
   width: 6px;
@@ -150,6 +249,35 @@
   font-size: 11px;
   color: var(--ink-3);
   margin: 0;
+}
+
+/* ── highlighter marks + editorial underline ─────────────────────────── */
+.gl-mark-leaf,
+.gl-mark-amber,
+.gl-mark-clay,
+.gl-mark-rose,
+.gl-mark-sand {
+  background-repeat: no-repeat;
+  background-size: 100% 55%;
+  background-position: 0 85%;
+  padding: 0 0.18em 0.04em;
+  border-radius: 3px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  font-weight: 700;
+  color: var(--ink);
+}
+.gl-mark-leaf  { background-image: linear-gradient(var(--hl-leaf),  var(--hl-leaf)); }
+.gl-mark-amber { background-image: linear-gradient(var(--hl-amber), var(--hl-amber)); }
+.gl-mark-clay  { background-image: linear-gradient(var(--hl-clay),  var(--hl-clay)); }
+.gl-mark-rose  { background-image: linear-gradient(var(--hl-rose),  var(--hl-rose)); }
+.gl-mark-sand  { background-image: linear-gradient(var(--hl-sand),  var(--hl-sand)); }
+
+.gl-u-bold {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--accent-deep);
 }
 
 @media (prefers-reduced-motion: reduce) {

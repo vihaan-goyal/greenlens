@@ -135,6 +135,43 @@
   .anim-shimmer {
     animation: shimmer 4s ease-in-out infinite;
   }
+
+  /* Highlighter marks — painted background gradient that fills the lower
+     ~45% of the line, like felt-tip pen on paper stock. Inline-box so the
+     mark hugs the word; uses padding so the color extends past the glyph. */
+  .mark-leaf,
+  .mark-amber,
+  .mark-clay,
+  .mark-rose,
+  .mark-sand {
+    background-repeat: no-repeat;
+    background-size: 100% 55%;
+    background-position: 0 85%;
+    padding: 0 0.18em 0.04em;
+    border-radius: 3px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  .mark-leaf  { background-image: linear-gradient(var(--hl-leaf),  var(--hl-leaf)); }
+  .mark-amber { background-image: linear-gradient(var(--hl-amber), var(--hl-amber)); }
+  .mark-clay  { background-image: linear-gradient(var(--hl-clay),  var(--hl-clay)); }
+  .mark-rose  { background-image: linear-gradient(var(--hl-rose),  var(--hl-rose)); }
+  .mark-sand  { background-image: linear-gradient(var(--hl-sand),  var(--hl-sand)); }
+
+  /* Editorial underline — thick, generous offset, accent-colored. The kind a
+     copy editor would draw with a pencil under the word that matters most. */
+  .u-bold {
+    text-decoration: underline;
+    text-decoration-thickness: 2.5px;
+    text-underline-offset: 4px;
+    text-decoration-color: var(--accent-deep);
+  }
+  .u-wavy {
+    text-decoration: underline wavy;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 5px;
+    text-decoration-color: var(--verdict-poor);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

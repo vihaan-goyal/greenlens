@@ -9,9 +9,11 @@ html, body {
   background: var(--bg);
   color: var(--ink);
   font-family: 'Manrope', ui-rounded, system-ui, -apple-system, sans-serif;
-  width: 380px;
+  /* Chrome MV3 popups cap at ~800×600. Sit just below that ceiling so the
+     header + ring + pillars + weights stack with breathing room. */
+  width: 520px;
 }
-body { min-height: 420px; }
+body { min-height: 600px; }
 
 /* ── header ────────────────────────────────────────────────────────────── */
 .gl-header {
@@ -111,17 +113,43 @@ body { min-height: 420px; }
 .gl-pillar-rep {
   font-family: 'Fraunces', Georgia, serif;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
 .gl-pillar-rep--none { color: var(--ink-3); }
 .gl-pillar-track {
   position: relative;
-  height: 6px;
-  background: var(--line-soft);
+  height: 8px;
+  background: var(--card);
   border-radius: 999px;
-  overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--line-soft);
+}
+/* tick marks at 25/50/75 — anchor the eye on the 0–100 scale */
+.gl-pillar-track::before,
+.gl-pillar-track::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 1px;
+  height: 4px;
+  background: var(--ink-3);
+  opacity: 0.35;
+  transform: translateY(-50%);
+}
+.gl-pillar-track::before { left: 25%; }
+.gl-pillar-track::after  { left: 75%; }
+.gl-pillar-track-mid {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1px;
+  height: 4px;
+  background: var(--ink-3);
+  opacity: 0.35;
+  transform: translate(-50%, -50%);
 }
 .gl-pillar-fill {
   position: absolute;
@@ -132,27 +160,62 @@ body { min-height: 420px; }
 }
 .gl-pillar-spread {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: 50%;
+  height: 3px;
   border-radius: 999px;
+  background: var(--verdict-poor);
+  opacity: 0.55;
+  transform: translateY(-50%);
+}
+.gl-pillar-dot {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
   background: currentColor;
-  opacity: 0.28;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--card), 0 1px 2px rgba(46,42,34,0.25);
 }
 .gl-pillar-mean {
   position: absolute;
-  top: -2px;
-  width: 2px;
-  height: 10px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
   background: var(--ink);
-  border-radius: 1px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2.5px var(--card), 0 2px 4px rgba(46,42,34,0.28);
 }
-.gl-disagree-pill {
+.gl-split-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--verdict-poor);
+  color: var(--card);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow-soft);
+  margin-left: 8px;
+}
+.gl-split-pill__arrow { opacity: 0.7; padding: 0 2px; }
+.gl-agree-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--card-2);
+  color: var(--ink-2);
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.10em;
   text-transform: uppercase;
-  color: var(--verdict-poor);
-  margin-left: 6px;
+  margin-left: 8px;
 }
 
 /* rater rows under each pillar */
@@ -269,8 +332,14 @@ body { min-height: 420px; }
 
 /* ── flag detail screen ──────────────────────────────────────────────── */
 .gl-flag-head {
-  padding: 14px 20px 16px;
+  padding: 14px 20px 18px;
   border-bottom: 1px solid var(--line);
+}
+.gl-flag-head .gl-eyebrow {
+  font-size: 9.5px;
+  letter-spacing: 0.24em;
+  color: var(--accent-deep);
+  margin-top: 6px;
 }
 .gl-flag-back {
   font-family: inherit;
@@ -292,89 +361,175 @@ body { min-height: 420px; }
 }
 .gl-flag-name {
   font-family: 'Fraunces', Georgia, serif;
-  font-size: 22px;
+  font-size: 30px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
   margin: 4px 0 0;
   color: var(--ink);
 }
-.gl-flag-explanation {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--ink);
-  margin: 0;
+/* Headline split pill — sits under the ingredient name and tells the user
+   in one glance whether the raters agreed. Filled when split, quiet when not. */
+.gl-flag-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow-soft);
+}
+.gl-flag-summary--split {
+  background: var(--verdict-poor);
+  color: var(--card);
+}
+.gl-flag-summary--agree {
+  background: var(--card-2);
+  color: var(--ink-2);
+  box-shadow: none;
+}
+.gl-flag-summary__dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.85;
 }
 
-.gl-rater-positions {
-  list-style: none;
+.gl-flag-explanation {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
   margin: 0;
-  padding: 0;
 }
-.gl-rater-position {
-  padding: 12px 0;
-}
-.gl-rater-position + .gl-rater-position {
-  border-top: 1px solid var(--line-soft);
-}
-.gl-rater-position-head {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-.gl-rater-position-source {
-  font-size: 13px;
-  font-weight: 600;
+.gl-flag-explanation b {
+  font-weight: 700;
   color: var(--ink);
 }
+
+/* ── stance-led rater cards ───────────────────────────────────────────── */
+.gl-rater-positions {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* Each opinion is a bounded card. A 4px verdict-colored bar runs down the
+   left edge so the role of the card is legible before the eye reads any
+   text — the stance is the headline, the bar is its underline. */
+.gl-rater-position {
+  position: relative;
+  padding: 12px 14px 12px 18px;
+  background: var(--card-2);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.gl-rater-position::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--ink-3);
+}
+.gl-rater-position[data-stance="concern"]::before { background: var(--verdict-bad); }
+.gl-rater-position[data-stance="caution"]::before { background: var(--verdict-poor); }
+.gl-rater-position[data-stance="safe"]::before    { background: var(--verdict-good); }
+.gl-rater-position[data-stance="unknown"]::before { background: var(--ink-3); }
+
+.gl-rater-position-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+/* The stance is the loudest thing on the card — 22px serif, verdict color.
+   This is the answer to "is this safe", so it gets the headline weight. */
 .gl-rater-position-stance {
-  font-size: 10px;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 22px;
   font-weight: 600;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: none;
 }
 .gl-rater-position-stance[data-stance="concern"]  { color: var(--verdict-bad); }
 .gl-rater-position-stance[data-stance="caution"]  { color: var(--verdict-poor); }
 .gl-rater-position-stance[data-stance="safe"]     { color: var(--verdict-good); }
 .gl-rater-position-stance[data-stance="unknown"]  { color: var(--ink-3); }
+
+/* Funding model — outlined stamp, neutral palette (per the standing rule:
+   never silently color-code "ad-supported = bad"). Sits to the right of the
+   stance, balancing the head row. */
+.gl-rater-position-funding {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--ink-2);
+  background: transparent;
+  color: var(--ink);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+
+.gl-rater-position-source {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: 0.005em;
+}
 .gl-rater-position-reasoning {
   font-size: 12.5px;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--ink-2);
-  margin: 0;
+  margin: 6px 0 0;
 }
 
-.gl-stance-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-.gl-stance-dot[data-stance="concern"]  { background: var(--verdict-bad); }
-.gl-stance-dot[data-stance="caution"]  { background: var(--verdict-poor); }
-.gl-stance-dot[data-stance="safe"]     { background: var(--verdict-good); }
-.gl-stance-dot[data-stance="unknown"]  { background: var(--ink-3); }
-
+/* ── other notes ──────────────────────────────────────────────────────── */
 .gl-notes {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .gl-note {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 0;
-  font-size: 12px;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--card-2);
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
   color: var(--ink);
+  line-height: 1.3;
 }
 .gl-note-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   flex: 0 0 auto;
+  box-shadow: 0 0 0 2px var(--card);
 }
 
 /* ── idle / unknown ───────────────────────────────────────────────────── */
@@ -407,6 +562,51 @@ body { min-height: 420px; }
 }
 .anim-drift {
   animation: drift 5s ease-in-out infinite;
+}
+
+/* ── highlighter marks + editorial underline ─────────────────────────── */
+/* Same trick as the web app: paint a felt-tip background in the bottom 55%
+   of the line height so the word reads as "marked", not just colored. */
+.gl-mark-leaf,
+.gl-mark-amber,
+.gl-mark-clay,
+.gl-mark-rose,
+.gl-mark-sand {
+  background-repeat: no-repeat;
+  background-size: 100% 55%;
+  background-position: 0 85%;
+  padding: 0 0.18em 0.04em;
+  border-radius: 3px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  font-weight: 700;
+  color: var(--ink);
+}
+.gl-mark-leaf  { background-image: linear-gradient(var(--hl-leaf),  var(--hl-leaf)); }
+.gl-mark-amber { background-image: linear-gradient(var(--hl-amber), var(--hl-amber)); }
+.gl-mark-clay  { background-image: linear-gradient(var(--hl-clay),  var(--hl-clay)); }
+.gl-mark-rose  { background-image: linear-gradient(var(--hl-rose),  var(--hl-rose)); }
+.gl-mark-sand  { background-image: linear-gradient(var(--hl-sand),  var(--hl-sand)); }
+
+.gl-u-bold {
+  text-decoration: underline;
+  text-decoration-thickness: 2.5px;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--accent-deep);
+}
+
+/* Verdict band as a filled pill — used next to the composite numeral. */
+.gl-band-pill {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--card);
+  box-shadow: var(--shadow-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {

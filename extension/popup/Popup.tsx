@@ -169,7 +169,7 @@ function ProductPanel({
       <h2 className="gl-product-name">{payload.product.displayName}</h2>
       <p className="gl-brand">{payload.brand.name}</p>
 
-      <div className="gl-ring-wrap">
+      <div className="gl-ring-wrap" style={{ flexDirection: 'column' }}>
         <VerdictRing
           mean={o ?? 0}
           min={range?.min ?? 0}
@@ -178,6 +178,11 @@ function ProductPanel({
           label={band ? VERDICT_LABEL[band] : 'No data'}
           available={o !== null}
         />
+        {band && (
+          <span className="gl-band-pill" style={{ background: color }}>
+            {VERDICT_LABEL[band]}
+          </span>
+        )}
       </div>
       {range && range.max - range.min > 0.5 && (
         <p className="gl-ring-range">
@@ -185,10 +190,27 @@ function ProductPanel({
         </p>
       )}
       {driver && (
-        <p className="gl-foot" style={{ textAlign: 'center', marginTop: 6 }}>
-          {driver.direction === 'lifts'
-            ? `${capitalize(AXIS_LABEL[driver.axis].toLowerCase())} is carrying your composite.`
-            : `${capitalize(AXIS_LABEL[driver.axis].toLowerCase())} is dragging your composite.`}
+        <p
+          className="gl-foot"
+          style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: 'var(--ink)' }}
+        >
+          <span className={driverMarkClass(band)}>
+            {capitalize(AXIS_LABEL[driver.axis].toLowerCase())}
+          </span>{' '}
+          is{' '}
+          <span
+            className="gl-u-bold"
+            style={{
+              fontWeight: 700,
+              textDecorationColor:
+                driver.direction === 'lifts'
+                  ? 'var(--verdict-excellent)'
+                  : 'var(--verdict-poor)',
+            }}
+          >
+            {driver.direction === 'lifts' ? 'carrying' : 'dragging'}
+          </span>{' '}
+          your composite.
         </p>
       )}
 
@@ -221,13 +243,24 @@ function PillarRow({
   const color = band ? VERDICT_VAR[band] : 'var(--ink-3)';
   const rep = p.representative;
   const spread = p.spread;
+  const split = p.disagreement && spread;
 
   return (
     <div className="gl-pillar" style={{ color }}>
       <div className="gl-pillar-head">
         <span className="gl-pillar-label" style={{ color: 'var(--ink-2)' }}>
           {AXIS_LABEL[axis]}
-          {p.disagreement && <span className="gl-disagree-pill">Raters split</span>}
+          {split ? (
+            <span className="gl-split-pill">
+              Split
+              <span className="gl-split-pill__arrow">·</span>
+              {Math.round(spread.min)}
+              <span className="gl-split-pill__arrow">→</span>
+              {Math.round(spread.max)}
+            </span>
+          ) : p.ratings.length > 1 ? (
+            <span className="gl-agree-pill">Raters agree</span>
+          ) : null}
         </span>
         <span className={`gl-pillar-rep${rep === null ? ' gl-pillar-rep--none' : ''}`}>
           {rep === null ? '—' : Math.round(rep)}
@@ -235,19 +268,29 @@ function PillarRow({
       </div>
 
       <div className="gl-pillar-track">
-        {spread ? (
-          <>
+        <span className="gl-pillar-track-mid" aria-hidden />
+        {split && (
+          <span
+            className="gl-pillar-spread"
+            style={{ left: `${spread.min}%`, right: `${100 - spread.max}%` }}
+            aria-hidden
+          />
+        )}
+        {p.ratings.map((r) => {
+          const rband = verdictBand(r.score);
+          const rcolor = rband ? VERDICT_VAR[rband] : 'var(--ink-3)';
+          return (
             <span
-              className="gl-pillar-spread"
-              style={{ left: `${spread.min}%`, right: `${100 - spread.max}%` }}
+              key={r.sourceId}
+              className="gl-pillar-dot"
+              style={{ left: `${Math.max(0, Math.min(100, r.score))}%`, color: rcolor }}
+              aria-label={`${r.sourceName} ${Math.round(r.score)}`}
             />
-            {rep !== null && (
-              <span className="gl-pillar-mean" style={{ left: `calc(${rep}% - 1px)` }} />
-            )}
-          </>
-        ) : rep !== null ? (
+          );
+        })}
+        {p.ratings.length === 0 && rep !== null && (
           <span className="gl-pillar-fill" style={{ left: 0, width: `${rep}%` }} />
-        ) : null}
+        )}
       </div>
 
       {p.ratings.length > 0 && (
@@ -299,6 +342,8 @@ function flagSplitLabel(f: IngredientFlag): string {
 // model, every reasoning sentence. Never blended.
 
 function FlagDetailScreen({ flag, onBack }: { flag: IngredientFlag; onBack: () => void }) {
+  const summary = summarizeStances(flag);
+
   return (
     <main>
       <header className="gl-flag-head">
@@ -312,6 +357,16 @@ function FlagDetailScreen({ flag, onBack }: { flag: IngredientFlag; onBack: () =
         </button>
         <p className="gl-eyebrow">Ingredient flag</p>
         <h2 className="gl-flag-name">{flag.name}</h2>
+        {summary && (
+          <span
+            className={`gl-flag-summary ${
+              summary.kind === 'split' ? 'gl-flag-summary--split' : 'gl-flag-summary--agree'
+            }`}
+          >
+            <span className="gl-flag-summary__dot" aria-hidden />
+            {summary.label}
+          </span>
+        )}
       </header>
 
       <section className="gl-section">
@@ -322,19 +377,16 @@ function FlagDetailScreen({ flag, onBack }: { flag: IngredientFlag; onBack: () =
         <p className="gl-eyebrow">Where each rater lands</p>
         <ul className="gl-rater-positions">
           {flag.positions.map((p) => (
-            <li key={p.sourceId} className="gl-rater-position">
+            <li key={p.sourceId} className="gl-rater-position" data-stance={p.stance}>
               <header className="gl-rater-position-head">
-                <span
-                  className="gl-stance-dot"
-                  data-stance={p.stance}
-                  aria-hidden
-                />
-                <span className="gl-rater-position-source">{p.sourceName}</span>
                 <span className="gl-rater-position-stance" data-stance={p.stance}>
                   {STANCE_LABEL[p.stance]}
                 </span>
-                <span className="gl-rater-funding">{FUNDING_LABEL[p.fundingModel]}</span>
+                <span className="gl-rater-position-funding">
+                  {FUNDING_LABEL[p.fundingModel]}
+                </span>
               </header>
+              <p className="gl-rater-position-source">{p.sourceName}</p>
               <p className="gl-rater-position-reasoning">{p.reasoning}</p>
             </li>
           ))}
@@ -360,6 +412,32 @@ function FlagDetailScreen({ flag, onBack }: { flag: IngredientFlag; onBack: () =
       )}
     </main>
   );
+}
+
+/** Roll the per-rater stances into one short banner. Split if more than one
+ *  distinct stance is present; agree if not. The label names the count so
+ *  the user reads it at a glance instead of decoding three cards first. */
+function summarizeStances(flag: IngredientFlag): { kind: 'split' | 'agree'; label: string } | null {
+  if (flag.positions.length === 0) return null;
+  const counts: Partial<Record<IngredientStance, number>> = {};
+  for (const p of flag.positions) {
+    counts[p.stance] = (counts[p.stance] ?? 0) + 1;
+  }
+  const entries = Object.entries(counts) as Array<[IngredientStance, number]>;
+  if (entries.length === 1) {
+    const [stance, count] = entries[0]!;
+    return {
+      kind: 'agree',
+      label: `All ${count} agree · ${STANCE_LABEL[stance].toLowerCase()}`,
+    };
+  }
+  // Order: concern, caution, safe, unknown (loudest first so the chip leads
+  // with the most-cautious stance the reader needs to see).
+  const order: IngredientStance[] = ['concern', 'caution', 'safe', 'unknown'];
+  const parts = order
+    .filter((s) => counts[s])
+    .map((s) => `${counts[s]} ${STANCE_LABEL[s].toLowerCase()}`);
+  return { kind: 'split', label: `Raters split · ${parts.join(' · ')}` };
 }
 
 const STANCE_LABEL: Record<IngredientStance, string> = {
@@ -460,4 +538,21 @@ function headerMood(pillars: Pillars | undefined, weights: Weights): SonionMood 
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** Pick a highlighter color keyed to the composite verdict band. */
+function driverMarkClass(band: ReturnType<typeof verdictBand>): string {
+  switch (band) {
+    case 'excellent':
+    case 'good':
+      return 'gl-mark-leaf';
+    case 'fair':
+      return 'gl-mark-amber';
+    case 'poor':
+      return 'gl-mark-clay';
+    case 'bad':
+      return 'gl-mark-rose';
+    default:
+      return 'gl-mark-sand';
+  }
 }

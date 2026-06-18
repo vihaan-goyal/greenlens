@@ -4,6 +4,7 @@ import { overall, overallRange, topMarginalDriver } from '@/lib/domain/scoring';
 import { VERDICT_LABEL, VERDICT_VAR, verdictBand } from '@/lib/domain/verdict';
 import { AXIS_PHRASE, type Weights } from '@/lib/domain/types';
 import { Sonion, type SonionMood } from '@/components/Sonion';
+import { Floater } from './Floater';
 
 interface Props {
   payload: VerdictPayload;
@@ -28,12 +29,10 @@ export function Card({ payload, weights }: Props) {
 
   const verdictLine = band ? VERDICT_LABEL[band] : 'No data';
   const color = band ? VERDICT_VAR[band] : 'var(--ink-3)';
-  const sonionLine =
-    driver && o !== null
-      ? `${driver.direction === 'lifts' ? 'Your weighting is carried by' : 'Your weighting is dragged by'} ${AXIS_PHRASE[driver.axis]}.`
-      : 'Tap to see who rates this and how.';
+  const markClass = MARK_BY_BAND[band ?? 'sand'];
 
   return (
+    <Floater onDragStart={() => setOpen(false)}>
     <div className="gl-card" data-band={band ?? 'none'}>
       <button
         type="button"
@@ -41,12 +40,14 @@ export function Card({ payload, weights }: Props) {
         aria-label={`Greenlens verdict: ${verdictLine} (${o === null ? 'no data' : Math.round(o)} out of 100)`}
         onClick={() => setOpen((v) => !v)}
       >
-        <Sonion mood={mood} size={48} idle={!open} />
+        <Sonion mood={mood} size={60} idle={!open} />
         <span className="gl-trigger-text">
           <span className="gl-trigger-score" style={{ color }}>
             {o === null ? '—' : Math.round(o)}
           </span>
-          <span className="gl-trigger-band">{verdictLine}</span>
+          <span className="gl-trigger-band" data-band={band ?? 'none'}>
+            {verdictLine}
+          </span>
         </span>
       </button>
 
@@ -57,28 +58,72 @@ export function Card({ payload, weights }: Props) {
             <h2 className="gl-title">{payload.product.displayName}</h2>
             <p className="gl-brand">{payload.brand.name}</p>
           </header>
-          <p className="gl-sonion-line">{sonionLine}</p>
+          <p className="gl-sonion-line">
+            {driver && o !== null ? (
+              <>
+                Your weighting is{' '}
+                <span
+                  className="gl-u-bold"
+                  style={{
+                    fontWeight: 700,
+                    textDecorationColor:
+                      driver.direction === 'lifts'
+                        ? 'var(--verdict-excellent)'
+                        : 'var(--verdict-poor)',
+                  }}
+                >
+                  {driver.direction === 'lifts' ? 'carried' : 'dragged'}
+                </span>{' '}
+                by <span className={markClass}>{AXIS_PHRASE[driver.axis]}</span>.
+              </>
+            ) : (
+              'Tap to see who rates this and how.'
+            )}
+          </p>
           {range && range.max - range.min > 0.5 && (
             <p className="gl-range">
-              Rater range <span className="gl-range-num">{Math.round(range.min)}–{Math.round(range.max)}</span>
+              Rater range{' '}
+              <span className="gl-range-num">
+                {Math.round(range.min)}–{Math.round(range.max)}
+              </span>
             </p>
           )}
-          <p className="gl-pillars">
+          <div className="gl-pillars">
             {Object.values(payload.pillars).map((p) => (
               <span key={p.axis} className="gl-pillar">
                 <span className="gl-pillar-label">{AXIS_PHRASE[p.axis]}</span>
                 <span className="gl-pillar-num">
                   {p.representative === null ? '—' : Math.round(p.representative)}
                 </span>
-                {p.disagreement && <span className="gl-disagree" title="Raters disagree" />}
+                {p.disagreement && p.spread ? (
+                  <span className="gl-split-chip">
+                    Split
+                    <span className="gl-split-chip__arrow">·</span>
+                    {Math.round(p.spread.min)}
+                    <span className="gl-split-chip__arrow">→</span>
+                    {Math.round(p.spread.max)}
+                  </span>
+                ) : (
+                  <span className="gl-pillar-spacer" />
+                )}
               </span>
             ))}
-          </p>
+          </div>
           <p className="gl-foot">
             Open the toolbar icon for full pillar controls and rater-by-rater detail.
           </p>
         </div>
       )}
     </div>
+    </Floater>
   );
 }
+
+const MARK_BY_BAND: Record<string, string> = {
+  excellent: 'gl-mark-leaf',
+  good: 'gl-mark-leaf',
+  fair: 'gl-mark-amber',
+  poor: 'gl-mark-clay',
+  bad: 'gl-mark-rose',
+  sand: 'gl-mark-sand',
+};

@@ -35,8 +35,12 @@ function ensureHost(): { shadow: ShadowRoot; mountPoint: HTMLElement } {
   }
   host = document.createElement('div');
   host.id = HOST_ID;
+  // Fullscreen invisible overlay: the Floater inside positions itself with
+  // `position: fixed` and turns pointer-events back on for just its own
+  // bounding box. The host being click-through means Amazon's UI behind
+  // it stays interactive — only the pill itself catches events.
   host.style.cssText =
-    'all: initial; display: block; position: fixed; right: 16px; bottom: 16px; z-index: 2147483647;';
+    'all: initial; display: block; position: fixed; inset: 0; pointer-events: none; z-index: 2147483647;';
   const shadow = host.attachShadow({ mode: 'open' });
 
   const tokensStyle = document.createElement('style');

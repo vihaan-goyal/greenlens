@@ -60,12 +60,12 @@ export default async function HomePage({ searchParams }: HomeProps) {
 
         {/* Editorial display title */}
         <h1
-          className="relative mt-3 font-display text-[44px] font-semibold leading-[0.92] text-ink anim-rise"
+          className="relative mt-3 font-display text-[46px] font-semibold leading-[0.92] text-ink anim-rise"
           style={{ animationDelay: '60ms' }}
         >
-          The second
+          The <span className="mark-leaf font-bold">second</span>
           <br />
-          <span className="italic" style={{ color: 'var(--accent-deep)' }}>
+          <span className="italic u-bold" style={{ color: 'var(--accent-deep)' }}>
             opinion
           </span>{' '}
           on every
@@ -82,7 +82,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
           <div className="pb-2">
             <p className="text-[13px] leading-snug text-ink">
               I pull every public rater into one view —{' '}
-              <span className="font-display italic" style={{ color: 'var(--accent-deep)' }}>
+              <span className="font-display italic font-bold mark-amber" style={{ color: 'var(--ink)' }}>
                 and never hide
               </span>{' '}
               where they disagree.
@@ -154,20 +154,23 @@ export default async function HomePage({ searchParams }: HomeProps) {
 
       {/* ─── LEGEND CHIPS ───────────────────────────────────────────────── */}
       <section className="px-5 pb-4">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.20em] text-ink-3">
+        <p className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.20em] text-ink-3">
+          <span className="h-px flex-1" style={{ background: 'var(--line)' }} />
           The verdict scale
+          <span className="h-px flex-1" style={{ background: 'var(--line)' }} />
         </p>
-        <div className="flex items-stretch gap-1.5 overflow-hidden rounded-pill" style={{ background: 'var(--card)', border: '1px solid var(--line)' }}>
-          {(['bad', 'poor', 'fair', 'good', 'excellent'] as const).map((band) => (
+        <div className="flex items-stretch gap-1">
+          {(['bad', 'poor', 'fair', 'good', 'excellent'] as const).map((band, i) => (
             <div
               key={band}
-              className="flex-1 px-2 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wider"
+              className="flex-1 rounded-pill px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-[0.10em] shadow-card"
               style={{
-                color: VERDICT_VAR[band],
-                borderBottom: `3px solid ${VERDICT_VAR[band]}`,
+                background: VERDICT_VAR[band],
+                color: 'var(--card)',
               }}
             >
-              {band}
+              <span className="opacity-60 tabular">0{i + 1}</span>{' '}
+              <span>{band}</span>
             </div>
           ))}
         </div>
@@ -251,15 +254,15 @@ export default async function HomePage({ searchParams }: HomeProps) {
                           {product.displayName}
                         </p>
                         <div className="flex items-center justify-between gap-2 text-[10px] text-ink-3">
-                          <span>
+                          <span className="uppercase tracking-[0.10em]">
                             {product.category} · {product.sizeValue}
                             {product.sizeUnit}
                           </span>
                           <span
-                            className="rounded-pill px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
+                            className="rounded-pill px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] shadow-card"
                             style={{
-                              color,
-                              background: `color-mix(in srgb, ${color} 14%, transparent)`,
+                              color: 'var(--card)',
+                              background: color,
                             }}
                           >
                             {band ?? 'no data'}
@@ -298,10 +301,10 @@ export default async function HomePage({ searchParams }: HomeProps) {
           <p className="halo-content font-display text-[10px] font-semibold uppercase tracking-[0.30em]" style={{ color: 'var(--accent-warm)' }}>
             the one rule
           </p>
-          <p className="halo-content mt-2 font-display text-[18px] font-medium leading-snug">
-            Never <span className="italic">blend</span> a score that hides
+          <p className="halo-content mt-2 font-display text-[20px] font-semibold leading-snug">
+            Never <span className="italic mark-amber" style={{ color: 'var(--ink)' }}>blend</span> a score that hides
             <br />
-            who disagrees.
+            <span className="u-bold" style={{ textDecorationColor: 'var(--accent-warm)' }}>who disagrees</span>.
           </p>
           <p className="halo-content mt-3 text-[11px] leading-relaxed" style={{ color: '#D5CCB7' }}>
             Weights are yours, computed at read time, never stored. Funding model

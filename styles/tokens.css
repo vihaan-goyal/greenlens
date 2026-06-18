@@ -29,6 +29,15 @@
   --halo-clay: rgba(188, 130, 85, 0.20);
   --halo-rose: rgba(176, 101, 90, 0.18);
 
+  /* Highlighter marks — painted behind text like a felt-tip pen. Tuned for
+     warm beige so they read as "marker on stock" instead of "transparent CSS". */
+  --hl-leaf: rgba(94, 123, 83, 0.32);
+  --hl-amber: rgba(201, 149, 96, 0.34);
+  --hl-clay: rgba(188, 130, 85, 0.32);
+  --hl-rose: rgba(176, 101, 90, 0.30);
+  --hl-sand: rgba(58, 52, 43, 0.10);
+
   --shadow-soft: 0 1px 2px rgba(46, 42, 34, 0.05), 0 18px 38px -18px rgba(46, 42, 34, 0.18);
   --shadow-lift: 0 2px 4px rgba(46, 42, 34, 0.06), 0 26px 50px -22px rgba(46, 42, 34, 0.25);
+  --shadow-press: 0 3px 0 0 var(--espresso), 0 4px 0 0 var(--espresso);
 }

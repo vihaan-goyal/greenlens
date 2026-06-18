@@ -33,11 +33,14 @@ const config: Config = {
       },
       borderRadius: {
         card: '22px',
+        blob: '28px',
+        hero: '32px',
         pill: '999px',
       },
       boxShadow: {
         card: 'var(--shadow-soft)',
         lift: 'var(--shadow-lift)',
+        press: 'var(--shadow-press)',
       },
     },
   },
