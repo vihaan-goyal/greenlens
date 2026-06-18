@@ -17,6 +17,7 @@
     "db:seed": "node --env-file=.env --experimental-strip-types prisma/seed.ts",
     "db:ingest": "node --env-file=.env --experimental-strip-types --import ./scripts/register-ts.mjs scripts/ingest-obf.ts",
     "db:hazard": "node --env-file=.env --experimental-strip-types --import ./scripts/register-ts.mjs scripts/derive-hazard.ts",
+    "db:ethics": "node --env-file=.env --experimental-strip-types --import ./scripts/register-ts.mjs scripts/derive-brand-ethics.ts",
     "db:reset": "prisma db push --force-reset && npm run db:seed",
     "postinstall": "prisma generate"
   },

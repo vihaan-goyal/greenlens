@@ -92,6 +92,19 @@ export const SOURCES: Source[] = [
     scaleDirection: 'higher_is_better',
     fundingModel: 'independent',
   },
+  // Brand-level cruelty-free / vegan certification (Leaping Bunny, PETA), on the
+  // labor/ethics axis. Kept in sync with BRAND_ETHICS_SOURCE in
+  // lib/ingestion/brand-ethics; duplicated inline so this file keeps its
+  // type-only imports for the node type-stripping seed run.
+  {
+    id: 'cruelty-free',
+    name: 'Cruelty-Free Certification',
+    axis: 'labor',
+    scaleMin: 0,
+    scaleMax: 100,
+    scaleDirection: 'higher_is_better',
+    fundingModel: 'nonprofit',
+  },
 ];
 
 // ─── Brands ─────────────────────────────────────────────────────────────────
