@@ -19,3 +19,7 @@ next-env.d.ts
 *.tsbuildinfo
 .eslintcache
 coverage/
+
+# Playwright MCP artifacts (snapshots, console logs, screenshots)
+.playwright-mcp/
+home-verify.png
