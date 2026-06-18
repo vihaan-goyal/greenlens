@@ -51,13 +51,70 @@ function viewToCatalog(v: ProductView): CatalogEntry {
   };
 }
 
+// ─── catalog resolution ──────────────────────────────────────────────────────
+// Two paths, in priority order:
+//   1. The live resolve API (the running Next app) — matches against the FULL
+//      Prisma catalog of thousands of ingested products, returning a definitive
+//      match-or-null. This is the source of truth when the server is up.
+//   2. The bundled seed (mock-repository) — a 17-product offline fallback used
+//      only when the API is unreachable, so Sonion still works on the curated
+//      demo brands with no server running.
+
+const DEFAULT_API_BASE = 'http://localhost:3000';
+const API_BASE_KEY = 'greenlens.apiBase';
+
+async function resolveApiUrl(): Promise<string> {
+  const stored = await chrome.storage.local.get([API_BASE_KEY]);
+  const base = (stored[API_BASE_KEY] as string | undefined)?.trim() || DEFAULT_API_BASE;
+  return `${base.replace(/\/+$/, '')}/api/resolve`;
+}
+
 /**
- * Live resolution against the canonical catalog. Replaces the token-overlap
- * stub with the real /lib/matcher pipeline (blocking → features → score),
- * threshold-gated so a low-confidence guess returns null and the UI shows
- * the "Not yet rated" state instead of inventing a match.
+ * Ask the live API to resolve a sighting against the full catalog. Returns the
+ * VerdictPayload on a match, `null` on a definitive no-match, or `undefined`
+ * when the server is unreachable / errored — the caller treats `undefined` as
+ * "fall back to the bundled seed", but a real `null` as "genuinely not rated".
+ */
+async function resolveViaApi(
+  s: RawProductSighting,
+): Promise<VerdictPayload | null | undefined> {
+  try {
+    const res = await fetch(await resolveApiUrl(), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        brand: s.rawBrand,
+        name: s.rawName,
+        gtin: s.rawGtin,
+        ingredients: s.rawIngredients,
+      }),
+    });
+    if (!res.ok) return undefined;
+    const data = (await res.json()) as { match: VerdictPayload | null };
+    return data.match;
+  } catch {
+    // Server down / not running — let the caller fall back to the bundled seed.
+    return undefined;
+  }
+}
+
+/**
+ * Resolve a sighting: try the live full-catalog API first, fall back to the
+ * bundled seed only when the server is unreachable.
  */
 async function resolveSighting(s: RawProductSighting): Promise<VerdictPayload | null> {
+  const viaApi = await resolveViaApi(s);
+  if (viaApi !== undefined) return viaApi;
+  return resolveViaMock(s);
+}
+
+/**
+ * Offline fallback: resolve against the bundled 17-product seed using the real
+ * /lib/matcher pipeline (blocking → features → score), threshold-gated so a
+ * low-confidence guess returns null and the UI shows "Not yet rated" instead of
+ * inventing a match.
+ */
+async function resolveViaMock(s: RawProductSighting): Promise<VerdictPayload | null> {
   const views = await mockRepository.listProducts();
   const brands = collectBrands(views);
   const catalog = views.map(viewToCatalog);
