@@ -32,6 +32,13 @@ const obfIngredientSchema = z.object({
   text: z.string().optional(),
 });
 
+// Structured packaging component (newer OBF schema): each part's material/shape.
+const obfPackagingSchema = z.object({
+  material: z.string().nullable().optional(),
+  shape: z.string().nullable().optional(),
+  recycling: z.string().nullable().optional(),
+});
+
 export const obfProductSchema = z.object({
   code: z.string().optional(),
   product_name: z.string().optional(),
@@ -43,9 +50,16 @@ export const obfProductSchema = z.object({
   // canonical Product's `category` when the matcher finds no existing one.
   categories: z.string().optional(),
   categories_tags: z.array(z.string()).optional(),
-  // Eco-Score is the only OBF rating we surface; it's often absent for cosmetics.
+  // Eco-Score is the only OBF *rating* we surface; it's often absent for cosmetics.
   ecoscore_score: z.number().nullable().optional(),
   ecoscore_grade: z.string().nullable().optional(),
+  // Packaging-material tags. Present for far more products than the Eco-Score, so
+  // they feed the derived Greenlens Packaging Scan (see lib/ingestion/packaging).
+  // Three forms in the wild, in order of preference: structured `packagings`,
+  // material-only `packaging_materials_tags`, then the mixed `packaging_tags`.
+  packagings: z.array(obfPackagingSchema).optional(),
+  packaging_materials_tags: z.array(z.string()).optional(),
+  packaging_tags: z.array(z.string()).optional(),
 });
 
 export const obfResponseSchema = z.object({
@@ -129,6 +143,25 @@ export function extractIngredients(product: ObfProduct): string[] {
       .filter(Boolean);
   }
   return [];
+}
+
+/**
+ * Pull packaging-material tags from a validated OBF product, preferring the
+ * richest form available: structured `packagings[].material`, then the
+ * material-only `packaging_materials_tags`, then the mixed `packaging_tags`
+ * (which also includes shapes — the packaging scorer ignores non-materials).
+ * The scorer (lib/ingestion/packaging) consumes these; this only extracts them.
+ */
+export function extractPackagingMaterials(product: ObfProduct): string[] {
+  const structured = product.packagings
+    ?.map((p) => p.material?.trim())
+    .filter((m): m is string => !!m);
+  if (structured && structured.length > 0) return structured;
+
+  const materialTags = product.packaging_materials_tags?.map((t) => t.trim()).filter(Boolean);
+  if (materialTags && materialTags.length > 0) return materialTags;
+
+  return product.packaging_tags?.map((t) => t.trim()).filter(Boolean) ?? [];
 }
 
 /** Normalize a validated OBF product into a domain Listing. */

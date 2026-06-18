@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   extractIngredients,
+  extractPackagingMaterials,
   extractRatings,
   fetchOpenBeautyFacts,
   ingestBarcode,
@@ -80,6 +81,35 @@ describe('normalization helpers', () => {
     expect(ingredients[0]).toBe('Purified Water');
     expect(ingredients).not.toContain('');
     expect(ingredients).toHaveLength(7);
+  });
+
+  it('prefers structured packaging materials over the tag fallbacks', () => {
+    const product = obfResponseSchema.parse({
+      status: 1,
+      product: {
+        packagings: [{ material: 'en:glass', shape: 'en:bottle' }, { material: 'en:pp' }],
+        packaging_materials_tags: ['en:plastic'],
+        packaging_tags: ['en:bottle'],
+      },
+    }).product!;
+    expect(extractPackagingMaterials(product)).toEqual(['en:glass', 'en:pp']);
+  });
+
+  it('falls back to material tags, then mixed packaging tags', () => {
+    const materialOnly = obfResponseSchema.parse({
+      status: 1,
+      product: { packaging_materials_tags: ['en:glass'], packaging_tags: ['en:bottle'] },
+    }).product!;
+    expect(extractPackagingMaterials(materialOnly)).toEqual(['en:glass']);
+
+    const tagsOnly = obfResponseSchema.parse({
+      status: 1,
+      product: { packaging_tags: ['en:glass', 'en:bottle'] },
+    }).product!;
+    expect(extractPackagingMaterials(tagsOnly)).toEqual(['en:glass', 'en:bottle']);
+
+    const none = obfResponseSchema.parse({ status: 1, product: {} }).product!;
+    expect(extractPackagingMaterials(none)).toEqual([]);
   });
 });
 

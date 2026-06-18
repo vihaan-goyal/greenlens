@@ -105,6 +105,20 @@ export const SOURCES: Source[] = [
     scaleDirection: 'higher_is_better',
     fundingModel: 'nonprofit',
   },
+  // Greenlens's own derived packaging-recyclability signal, computed from open
+  // packaging standards over each product's OBF packaging-material tags (see
+  // lib/ingestion/packaging). On the packaging axis, so it can disagree with the
+  // How2Recycle label rater. Kept in sync with PACKAGING_SOURCE there; duplicated
+  // inline so this file keeps its type-only imports for the node seed run.
+  {
+    id: 'packaging-scan',
+    name: 'Greenlens Packaging Scan',
+    axis: 'packaging',
+    scaleMin: 0,
+    scaleMax: 100,
+    scaleDirection: 'higher_is_better',
+    fundingModel: 'independent',
+  },
 ];
 
 // ─── Brands ─────────────────────────────────────────────────────────────────
