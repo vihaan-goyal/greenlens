@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { mockRepository } from '@/lib/data/mock-repository';
+import { repository } from '@/lib/data';
 import { VERDICT_VAR } from '@/lib/domain/verdict';
 import {
   FUNDING_LABEL,
@@ -27,9 +27,9 @@ const STANCE_COLOR: Record<IngredientStance, string> = {
 
 export default async function FlagPage({ params }: PageProps) {
   const { id, ingredient } = await params;
-  const base = await mockRepository.getProduct(id);
+  const base = await repository.getProduct(id);
   if (!base) notFound();
-  const flag = await mockRepository.getIngredientFlag(id, ingredient);
+  const flag = await repository.getIngredientFlag(id, ingredient);
   if (!flag) notFound();
 
   return (

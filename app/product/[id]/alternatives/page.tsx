@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { mockRepository } from '@/lib/data/mock-repository';
+import { repository } from '@/lib/data';
 import { AXIS_LABEL } from '@/lib/domain/types';
 import { MiniRaterSpread } from '@/components/MiniRaterSpread';
 
@@ -10,10 +10,10 @@ interface PageProps {
 
 export default async function AlternativesPage({ params }: PageProps) {
   const { id } = await params;
-  const base = await mockRepository.getProduct(id);
+  const base = await repository.getProduct(id);
   if (!base) notFound();
 
-  const alternatives = await mockRepository.listAlternatives(id);
+  const alternatives = await repository.listAlternatives(id);
 
   return (
     <main className="px-5 pt-4 pb-6">

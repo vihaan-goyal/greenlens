@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { mockRepository, ingredientSlug } from '@/lib/data/mock-repository';
+import { repository, ingredientSlug } from '@/lib/data';
 import { RaterSpread } from '@/components/RaterSpread';
 import { CompositeRange } from '@/components/CompositeRange';
 import { WeightControls } from '@/components/WeightControls';
@@ -16,12 +16,12 @@ interface ProductPageProps {
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { id } = await params;
-  const view = await mockRepository.getProduct(id);
+  const view = await repository.getProduct(id);
   if (!view) notFound();
 
   const { product, brand, pillars } = view;
-  const flags = await mockRepository.listIngredientFlags(product.id);
-  const alternatives = await mockRepository.listAlternatives(product.id);
+  const flags = await repository.listIngredientFlags(product.id);
+  const alternatives = await repository.listAlternatives(product.id);
 
   return (
     <main className="relative px-5 pt-3 pb-12">

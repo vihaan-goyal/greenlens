@@ -1,0 +1,125 @@
+// Greenlens persistence layer.
+//
+// Mirrors the domain model in /lib/domain/types.ts. Two SQLite caveats shape
+// this file:
+//   1. SQLite has no native enums — axis / scaleDirection / fundingModel /
+//      stance / band are stored as String and re-typed at the repository seam.
+//   2. SQLite has no scalar lists — aliases / ingredients / rawIngredients and
+//      the opaque source payload are stored as Json.
+//
+// Ratings attach to the raw Listing, never to the canonical Product, so the
+// matcher can be re-run without losing source data (see CLAUDE.md).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Brand {
+  id       String  @id
+  name     String
+  parentId String?
+  aliases  Json // string[]
+
+  parent   Brand?  @relation("BrandParent", fields: [parentId], references: [id])
+  children Brand[] @relation("BrandParent")
+  products Product[]
+}
+
+model Product {
+  id          String  @id
+  brandId     String
+  displayName String
+  category    String
+  gtin        String?
+  sizeValue   Float?
+  sizeUnit    String?
+  ingredients Json // string[]
+  // Curated catalog order so the Prisma repo reproduces the mock's "On the
+  // shelf" ordering exactly. Real ingestion can leave this 0 and order by a
+  // real signal (e.g. fetchedAt) later.
+  sortIndex   Int     @default(0)
+
+  brand   Brand          @relation(fields: [brandId], references: [id])
+  matches ListingMatch[]
+  flags   IngredientFlag[]
+
+  @@index([brandId])
+  @@index([category])
+}
+
+model Source {
+  id             String @id
+  name           String
+  axis           String // Axis
+  scaleMin       Float
+  scaleMax       Float
+  scaleDirection String // ScaleDirection
+  fundingModel   String // FundingModel
+
+  listings Listing[]
+}
+
+model Listing {
+  id             String   @id
+  sourceId       String
+  nativeId       String
+  rawName        String
+  rawBrand       String
+  rawGtin        String?
+  rawIngredients Json // string[]
+  url            String
+  payload        Json
+  fetchedAt      DateTime
+
+  source  Source        @relation(fields: [sourceId], references: [id])
+  ratings Rating[]
+  match   ListingMatch?
+
+  @@index([sourceId])
+}
+
+model ListingMatch {
+  listingId  String  @id
+  productId  String
+  confidence Float
+  method     String
+  reviewed   Boolean @default(false)
+
+  listing Listing @relation(fields: [listingId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+}
+
+model Rating {
+  id         String   @id
+  listingId  String
+  scoreRaw   Float
+  scoreLabel String?
+  ingestedAt DateTime
+
+  listing Listing @relation(fields: [listingId], references: [id])
+
+  @@index([listingId])
+}
+
+// IngredientFlag is curated editorial content, not ingested rater data, so its
+// nested positions/notes are stored as Json rather than over-modeled into
+// tables. Keyed by (productId, slug); the repository rehydrates the domain shape.
+model IngredientFlag {
+  productId   String
+  slug        String
+  name        String
+  explanation String
+  positions   Json // IngredientRaterPosition[]
+  notes       Json // IngredientNote[]
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@id([productId, slug])
+}

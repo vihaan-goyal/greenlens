@@ -12,12 +12,21 @@
     "test:watch": "vitest",
     "ext:dev": "vite --config extension/vite.config.ts",
     "ext:build": "vite build --config extension/vite.config.ts",
-    "icons": "node extension/scripts/make-icons.mjs"
+    "icons": "node extension/scripts/make-icons.mjs",
+    "db:push": "prisma db push",
+    "db:seed": "node --env-file=.env --experimental-strip-types prisma/seed.ts",
+    "db:reset": "prisma db push --force-reset && npm run db:seed",
+    "postinstall": "prisma generate"
+  },
+  "prisma": {
+    "seed": "node --env-file=.env --experimental-strip-types prisma/seed.ts"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "zod": "^4.4.3",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
@@ -32,6 +41,7 @@
     "eslint-config-next": "^15.0.0",
     "jsdom": "^25.0.1",
     "postcss": "^8.4.49",
+    "prisma": "^6.19.3",
     "sharp": "^0.35.1",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.0",

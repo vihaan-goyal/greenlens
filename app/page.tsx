@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { mockRepository } from '@/lib/data/mock-repository';
+import { repository } from '@/lib/data';
 import { MiniRaterSpread } from '@/components/MiniRaterSpread';
 import { Sonion } from '@/components/Sonion';
 import { BrandMark } from '@/components/BrandMark';
@@ -15,8 +15,8 @@ export default async function HomePage({ searchParams }: HomeProps) {
   const { q } = await searchParams;
   const query = q?.trim() ?? '';
   const products = query
-    ? await mockRepository.searchProducts(query)
-    : await mockRepository.listProducts();
+    ? await repository.searchProducts(query)
+    : await repository.listProducts();
 
   return (
     <main className="relative pb-10">
