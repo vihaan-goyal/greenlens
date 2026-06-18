@@ -10,7 +10,7 @@ import { prismaRepository } from '../lib/data/prisma-repository';
 import { resolveItem, type CatalogEntry } from '../lib/matcher/matcher';
 import type { MatchableItem } from '../lib/matcher/features';
 
-const SAMPLE = 20;
+const SAMPLE = 200;
 
 async function main() {
   const { catalog, brands } = await prismaRepository.loadMatchContext();
