@@ -16,6 +16,7 @@
 //   npm run db:ingest -- 301871239019 3600542525237        # specific barcodes
 //   npm run db:ingest -- --search "serum" --limit 2000      # bulk by search term
 //   npm run db:ingest -- --packaging --limit 5000           # bulk, packaging-dense
+//   npm run db:ingest -- --packaging --page-start 21 --limit 8000  # resume past an earlier run
 //   npm run db:ingest -- --filter states_tags=en:packaging-completed --limit 3000
 //   npm run db:ingest -- --dry --limit 200                  # resolve only, persist nothing
 //
@@ -70,17 +71,21 @@ interface Args {
   /** Total products to pull in bulk mode. */
   limit: number;
   pageSize: number;
+  /** First search page to fetch (1-based). Use to resume deep pagination past an
+   *  earlier run instead of re-fetching products already in the catalog. */
+  pageStart: number;
   dry: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { barcodes: [], search: null, filters: [], limit: 25, pageSize: MAX_PAGE_SIZE, dry: false };
+  const args: Args = { barcodes: [], search: null, filters: [], limit: 25, pageSize: MAX_PAGE_SIZE, pageStart: 1, dry: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === undefined) continue;
     if (a === '--search') args.search = argv[++i] ?? null;
     else if (a === '--limit') args.limit = Number(argv[++i]) || args.limit;
     else if (a === '--page-size') args.pageSize = Math.min(MAX_PAGE_SIZE, Number(argv[++i]) || args.pageSize);
+    else if (a === '--page-start') args.pageStart = Math.max(1, Number(argv[++i]) || args.pageStart);
     else if (a === '--filter') {
       const kv = argv[++i] ?? '';
       const eq = kv.indexOf('=');
@@ -196,7 +201,7 @@ async function main() {
   if (bulk) {
     const pageSize = Math.min(args.pageSize, MAX_PAGE_SIZE);
     let collected = 0;
-    let page = 1;
+    let page = args.pageStart;
     let lastLog = Date.now();
     while (collected < args.limit) {
       let pageResult;
