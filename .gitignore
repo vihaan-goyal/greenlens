@@ -29,3 +29,5 @@ product-prisma.png
 # Prisma local SQLite database
 prisma/*.db
 prisma/*.db-journal
+prisma/*.db-wal
+prisma/*.db-shm
