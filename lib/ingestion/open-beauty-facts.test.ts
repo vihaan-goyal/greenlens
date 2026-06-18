@@ -126,6 +126,15 @@ describe('fetchOpenBeautyFacts', () => {
       fetchOpenBeautyFacts('301871239019', { fetchImpl: mockFetch({}, false) }),
     ).rejects.toThrow();
   });
+
+  it('treats a 404 (OBF\'s "unknown barcode" status) as not-found, not an error', async () => {
+    const fetch404 = (async () => ({
+      ok: false,
+      status: 404,
+      json: async () => NOT_FOUND_RESPONSE,
+    })) as unknown as typeof fetch;
+    await expect(fetchOpenBeautyFacts('0000000000000', { fetchImpl: fetch404 })).resolves.toBeNull();
+  });
 });
 
 describe('ingestBarcode (ingestion → matcher seam)', () => {

@@ -6,11 +6,16 @@ import {
   type IngredientFlag,
   type IngredientNote,
   type IngredientRaterPosition,
+  type Listing,
   type Product,
+  type Rating,
   type ScaleDirection,
   type Source,
 } from '../domain/types';
 import { summarizePillars } from '../domain/scoring';
+import { canonicalizeBrand } from '../matcher/blocking';
+import type { CatalogEntry } from '../matcher/matcher';
+import type { IngestResult } from '../ingestion/open-beauty-facts';
 import { prisma } from './prisma';
 import type { AlternativeView, ProductRepository, ProductView } from './repository';
 
@@ -198,6 +203,225 @@ export class PrismaProductRepository implements ProductRepository {
     const rows = await prisma.ingredientFlag.findMany({ where: { productId } });
     return rows.map(toFlag);
   }
+
+  // ─── Ingestion write-path ─────────────────────────────────────────────────
+  // Reading is rolled up from Listings + Ratings; ingestion is the inverse.
+  // These two methods are the only writers, and they live here (not on the
+  // read-only ProductRepository interface) because only the Prisma backing
+  // store is writable — the mock repo and the extension never ingest.
+
+  /**
+   * Snapshot the canonical catalog + brands in the matcher's shapes. An ingest
+   * job loads this once, resolves each fetched product against it, and extends
+   * the in-memory copies with anything `persistIngestResult` reports as new — so
+   * later barcodes in the same batch can match products minted earlier without a
+   * DB round-trip per item.
+   */
+  async loadMatchContext(): Promise<{ catalog: CatalogEntry[]; brands: Brand[] }> {
+    const [brandRows, productRows] = await Promise.all([
+      prisma.brand.findMany(),
+      prisma.product.findMany(),
+    ]);
+    const brands = brandRows.map(toBrand);
+    const nameById = new Map(brands.map((b) => [b.id, b.name] as const));
+    const catalog: CatalogEntry[] = productRows.map((row) => {
+      const p = toProduct(row as ProductRow);
+      return {
+        id: p.id,
+        productId: p.id,
+        brand: nameById.get(p.brandId),
+        name: p.displayName,
+        gtin: p.gtin,
+        ingredients: p.ingredients,
+        sizeValue: p.sizeValue,
+        sizeUnit: p.sizeUnit,
+      };
+    });
+    return { catalog, brands };
+  }
+
+  /**
+   * Persist one ingestion result. Idempotent on re-run (deterministic ids +
+   * upserts). When the matcher found a canonical product the Listing + Ratings
+   * attach to it; when it didn't, a new canonical Product (and Brand if the
+   * raw brand is unseen) is minted from the Listing so the catalog grows from
+   * real data. Ratings always hang off the Listing, never the Product, so the
+   * matcher can be re-run later without losing source data (see CLAUDE.md).
+   *
+   * `brands` is the caller's current brand list (for canonicalization); any
+   * brand/product this call creates is returned so the caller can extend its
+   * in-memory match context for the rest of the batch.
+   */
+  async persistIngestResult(
+    result: IngestResult,
+    brands: ReadonlyArray<Brand>,
+  ): Promise<PersistResult> {
+    const { listing, ratings, match, item, category } = result;
+
+    await this.writeListing(listing, ratings);
+
+    let productId: string;
+    let confidence: number;
+    let method: string;
+    let created = false;
+    let newBrand: Brand | null = null;
+    let newEntry: CatalogEntry | null = null;
+
+    if (match) {
+      productId = match.productId;
+      confidence = match.confidence;
+      method = 'obf-auto';
+    } else {
+      const brand = await this.ensureBrand(listing.rawBrand, brands);
+      newBrand = brand.created;
+      productId = `prod-${listing.id}`; // prod-obf-<code>; deterministic → idempotent
+      const displayName = listing.rawName || item.name || listing.nativeId;
+      await prisma.product.upsert({
+        where: { id: productId },
+        create: {
+          id: productId,
+          brandId: brand.id,
+          displayName,
+          category,
+          gtin: listing.rawGtin ?? null,
+          sizeValue: item.sizeValue ?? null,
+          sizeUnit: item.sizeUnit ?? null,
+          ingredients: listing.rawIngredients,
+          // Ingested products sort after the curated catalog's "On the shelf".
+          sortIndex: 1000,
+        },
+        update: {
+          brandId: brand.id,
+          displayName,
+          category,
+          gtin: listing.rawGtin ?? null,
+          sizeValue: item.sizeValue ?? null,
+          sizeUnit: item.sizeUnit ?? null,
+          ingredients: listing.rawIngredients,
+        },
+      });
+      created = true;
+      // The Listing defines this product, so the self-match is certain.
+      confidence = 1;
+      method = 'obf-new';
+      newEntry = { ...item, id: productId, productId };
+    }
+
+    await prisma.listingMatch.upsert({
+      where: { listingId: listing.id },
+      create: { listingId: listing.id, productId, confidence, method, reviewed: false },
+      update: { productId, confidence, method },
+    });
+
+    return { productId, created, newBrand, newEntry };
+  }
+
+  /**
+   * Attach a pre-computed Listing + Ratings to a known canonical product. Used
+   * by derived sources (e.g. the ingredient-hazard scan) that don't need the
+   * matcher — the product is already known, so this just upserts the Listing,
+   * replaces its Ratings, and points a ListingMatch at the product. Idempotent.
+   */
+  async attachListingToProduct(
+    listing: Listing,
+    ratings: ReadonlyArray<Rating>,
+    productId: string,
+    opts: { confidence: number; method: string },
+  ): Promise<void> {
+    await this.writeListing(listing, ratings);
+    await prisma.listingMatch.upsert({
+      where: { listingId: listing.id },
+      create: {
+        listingId: listing.id,
+        productId,
+        confidence: opts.confidence,
+        method: opts.method,
+        reviewed: false,
+      },
+      update: { productId, confidence: opts.confidence, method: opts.method },
+    });
+  }
+
+  /**
+   * Upsert a Listing and replace its Ratings wholesale, so a re-run reflects the
+   * latest scores rather than accumulating duplicates. The shared write step for
+   * both ingestion and derived sources.
+   */
+  private async writeListing(listing: Listing, ratings: ReadonlyArray<Rating>): Promise<void> {
+    const data = {
+      sourceId: listing.sourceId,
+      nativeId: listing.nativeId,
+      rawName: listing.rawName,
+      rawBrand: listing.rawBrand,
+      rawGtin: listing.rawGtin ?? null,
+      rawIngredients: listing.rawIngredients,
+      url: listing.url,
+      payload: listing.payload as object,
+      fetchedAt: listing.fetchedAt,
+    };
+    await prisma.listing.upsert({
+      where: { id: listing.id },
+      create: { id: listing.id, ...data },
+      update: data,
+    });
+    await prisma.rating.deleteMany({ where: { listingId: listing.id } });
+    if (ratings.length > 0) {
+      await prisma.rating.createMany({
+        data: ratings.map((r) => ({
+          id: r.id,
+          listingId: r.listingId,
+          scoreRaw: r.scoreRaw,
+          scoreLabel: r.scoreLabel ?? null,
+          ingestedAt: r.ingestedAt,
+        })),
+      });
+    }
+  }
+
+  /**
+   * Find the canonical brand for a raw OBF brand string, or mint one. Matching
+   * reuses the matcher's `canonicalizeBrand` so brand identity is consistent
+   * across the read and write paths. A new brand is seeded with the raw string
+   * as both name and an alias so future listings canonicalize back to it.
+   */
+  private async ensureBrand(
+    rawBrand: string,
+    brands: ReadonlyArray<Brand>,
+  ): Promise<{ id: string; created: Brand | null }> {
+    const trimmed = rawBrand.trim();
+    const canon = canonicalizeBrand(trimmed, brands);
+    // `canonicalizeBrand` returns an existing brand id on a hit, or a normalized
+    // fallback string (never an id) on a miss — so an id present in `brands`
+    // means a real match.
+    if (canon && brands.some((b) => b.id === canon)) return { id: canon, created: null };
+
+    const id = trimmed ? `brand-obf-${stripNorm(trimmed)}` : 'brand-unknown';
+    const name = trimmed || 'Unknown';
+    const aliases = trimmed ? [trimmed] : [];
+    await prisma.brand.upsert({
+      where: { id },
+      create: { id, name, parentId: null, aliases },
+      update: {},
+    });
+    // Only report it as new if the caller didn't already know about it.
+    const created = brands.some((b) => b.id === id) ? null : { id, name, aliases };
+    return { id, created };
+  }
+}
+
+export interface PersistResult {
+  productId: string;
+  /** True when a new canonical Product was minted (no existing match). */
+  created: boolean;
+  /** A brand minted by this call, for the caller to add to its match context. */
+  newBrand: Brand | null;
+  /** A catalog entry minted by this call, for the caller's match context. */
+  newEntry: CatalogEntry | null;
+}
+
+/** Lowercase, strip non-alphanumerics — mirrors the matcher's brand normalizer. */
+function stripNorm(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
 type FlagRow = {

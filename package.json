@@ -15,6 +15,7 @@
     "icons": "node extension/scripts/make-icons.mjs",
     "db:push": "prisma db push",
     "db:seed": "node --env-file=.env --experimental-strip-types prisma/seed.ts",
+    "db:ingest": "node --env-file=.env --experimental-strip-types --import ./scripts/register-ts.mjs scripts/ingest-obf.ts",
     "db:reset": "prisma db push --force-reset && npm run db:seed",
     "postinstall": "prisma generate"
   },

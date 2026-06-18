@@ -39,6 +39,10 @@ export const obfProductSchema = z.object({
   ingredients_text: z.string().optional(),
   ingredients: z.array(obfIngredientSchema).optional(),
   quantity: z.string().optional(),
+  // Free-text and tag forms of the category hierarchy; used only to seed a new
+  // canonical Product's `category` when the matcher finds no existing one.
+  categories: z.string().optional(),
+  categories_tags: z.array(z.string()).optional(),
   // Eco-Score is the only OBF rating we surface; it's often absent for cosmetics.
   ecoscore_score: z.number().nullable().optional(),
   ecoscore_grade: z.string().nullable().optional(),
@@ -77,7 +81,12 @@ export async function fetchOpenBeautyFacts(
   if (!digits) throw new Error('barcode must contain digits');
 
   const res = await doFetch(`${OBF_API_BASE}/${digits}.json`);
-  if (!res.ok) throw new Error(`Open Beauty Facts request failed: ${res.status}`);
+  // OBF answers an unknown barcode with HTTP 404 *and* a valid status:0 body, so
+  // 404 is "no such product" (→ null), not a transport failure. Any other
+  // non-OK status is a real error worth surfacing.
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Open Beauty Facts request failed: ${res.status}`);
+  }
 
   const json: unknown = await res.json();
   const parsed = obfResponseSchema.parse(json);
@@ -167,6 +176,19 @@ export function extractRatings(
   return ratings;
 }
 
+/**
+ * Best-effort category for a *new* canonical product. Prefers the most specific
+ * `categories_tags` entry (the last one), stripping the `en:` language prefix;
+ * falls back to the last free-text category, then 'uncategorized'. Category is
+ * not a matching feature — it only groups products on the Alternatives screen.
+ */
+export function extractCategory(product: ObfProduct): string {
+  const tag = product.categories_tags?.at(-1);
+  if (tag) return tag.replace(/^[a-z]{2}:/, '').replace(/[-_]+/g, ' ').trim();
+  const text = product.categories?.split(',').at(-1)?.trim();
+  return text || 'uncategorized';
+}
+
 /** Project a validated OBF product to the matcher's MatchableItem shape. */
 export function toMatchableItem(product: ObfProduct): MatchableItem {
   const { sizeValue, sizeUnit } = parseQuantity(product.quantity);
@@ -188,6 +210,15 @@ export interface IngestResult {
   ratings: Rating[];
   /** Matcher's resolution against the canonical catalog, or null if unmatched. */
   match: ResolveResult | null;
+  /**
+   * The matcher-normalized projection of this product (name/brand/gtin/size/
+   * ingredients). When `match` is null, a persistence layer uses this to mint a
+   * new canonical Product and to extend the in-memory catalog for the rest of a
+   * batch — no re-fetch needed.
+   */
+  item: MatchableItem;
+  /** Best-effort category, used only when minting a new canonical Product. */
+  category: string;
 }
 
 /**
@@ -205,7 +236,8 @@ export async function ingestBarcode(
 
   const listing = normalizeListing(fetched.product, fetched.raw, opts);
   const ratings = extractRatings(fetched.product, listing.id, opts);
-  const match = resolveItem(toMatchableItem(fetched.product), catalog, brands);
+  const item = toMatchableItem(fetched.product);
+  const match = resolveItem(item, catalog, brands);
 
-  return { listing, ratings, match };
+  return { listing, ratings, match, item, category: extractCategory(fetched.product) };
 }
