@@ -6,9 +6,11 @@ import { CompositeRange } from '@/components/CompositeRange';
 import { WeightControls } from '@/components/WeightControls';
 import { ScoreRing } from '@/components/ScoreRing';
 import { PillarBars } from '@/components/PillarBars';
+import { ScoreMethodology } from '@/components/ScoreMethodology';
 import { DisagreementCallout } from '@/components/DisagreementCallout';
 import { BrandMark } from '@/components/BrandMark';
 import { SonionReactive } from '@/components/SonionReactive';
+import { RecordView } from '@/components/RecordView';
 
 interface ProductPageProps {
   params: Promise<{ id: string }>;
@@ -19,16 +21,18 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const view = await repository.getProduct(id);
   if (!view) notFound();
 
-  const { product, brand, pillars } = view;
+  const { product, brand, pillars, sources } = view;
   const flags = await repository.listIngredientFlags(product.id);
   const alternatives = await repository.listAlternatives(product.id);
 
   return (
-    <main className="relative px-5 pt-3 pb-12">
+    <main className="relative mx-auto w-full max-w-xl px-5 pt-3 pb-12 md:px-6 md:pt-6">
+      {/* Records this look-up onto "your shelf" (client-side, localStorage). */}
+      <RecordView id={product.id} />
       {/* Back chip */}
       <nav className="mb-3">
         <Link
-          href="/"
+          href="/browse"
           className="inline-flex items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-ink-2"
           style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
         >
@@ -176,6 +180,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </div>
       </section>
 
+      {/* ─── HOW THIS SCORE IS BUILT ───────────────────────────────────── */}
+      <section className="mb-5 anim-rise" style={{ animationDelay: '260ms' }}>
+        <ScoreMethodology pillars={pillars} sources={sources} />
+      </section>
+
       {/* ─── COMPOSITE RANGE ───────────────────────────────────────────── */}
       <section className="mb-5 anim-rise" style={{ animationDelay: '280ms' }}>
         <SectionLabel kicker="your composite" title="Weighted by what you care about" />
@@ -258,8 +267,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
       </section>
 
       {/* ─── FLOATING SONION ───────────────────────────────────────────── */}
-      <div className="pointer-events-none fixed bottom-12 right-5 z-40">
-        <div className="pointer-events-auto">
+      {/* Anchored to the centered column, not the raw viewport, so on desktop
+          it sits at the column's bottom-right instead of the far screen edge. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-8 z-40 mx-auto w-full max-w-xl px-5">
+        <div className="pointer-events-auto ml-auto w-max">
           <SonionReactive pillars={pillars} size={84} halo />
         </div>
       </div>

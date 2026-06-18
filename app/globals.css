@@ -174,6 +174,48 @@
   }
 }
 
+@layer components {
+  /* "Your shelf" branch connectors — an indented tree growing off each product.
+     Layout-independent (no JS measuring): a vertical spine on the left, and a
+     horizontal elbow into each branch near its top, so alternatives read as
+     branches off the item you searched. */
+  .shelf-branches {
+    position: relative;
+    margin-left: 22px;
+    padding-left: 22px;
+  }
+  .shelf-branch {
+    position: relative;
+    margin-top: 8px;
+  }
+  /* vertical spine segment running through each node down to the next */
+  .shelf-branch::before {
+    content: '';
+    position: absolute;
+    left: -22px;
+    top: -8px; /* meet the previous node's gap */
+    bottom: 0;
+    width: 2px;
+    background: var(--line);
+  }
+  /* last node: stop the spine at its own elbow instead of running to the bottom */
+  .shelf-branch:last-child::before {
+    bottom: auto;
+    height: calc(8px + 26px);
+  }
+  /* horizontal elbow from spine into the node */
+  .shelf-branch::after {
+    content: '';
+    position: absolute;
+    left: -22px;
+    top: 26px;
+    width: 22px;
+    height: 2px;
+    background: var(--line);
+    border-bottom-left-radius: 6px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

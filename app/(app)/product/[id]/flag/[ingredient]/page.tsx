@@ -33,7 +33,7 @@ export default async function FlagPage({ params }: PageProps) {
   if (!flag) notFound();
 
   return (
-    <main className="px-5 pt-4 pb-6">
+    <main className="mx-auto w-full max-w-xl px-5 pt-4 pb-10 md:px-6 md:pt-8">
       <nav className="mb-6 text-xs text-ink-3">
         <Link href={`/product/${id}`} className="hover:text-ink">
           ← {base.product.displayName}

@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { repository } from '@/lib/data';
+import { buildShelfCatalog } from '@/lib/shelf-catalog';
 import { MiniRaterSpread } from '@/components/MiniRaterSpread';
 import { Sonion } from '@/components/Sonion';
 import { BrandMark } from '@/components/BrandMark';
 import { ScoreDial } from '@/components/ScoreDial';
+import { YourShelf } from '@/components/YourShelf';
 import { AXES } from '@/lib/domain/types';
 import { VERDICT_VAR, verdictBand } from '@/lib/domain/verdict';
 
@@ -14,14 +16,17 @@ interface HomeProps {
 export default async function HomePage({ searchParams }: HomeProps) {
   const { q } = await searchParams;
   const query = q?.trim() ?? '';
-  const products = query
-    ? await repository.searchProducts(query)
-    : await repository.listProducts();
+  // With a query → live search results (server-rendered grid).
+  // Without → "your shelf": persisted look-up history, rendered client-side
+  // from this lookup table so it can read localStorage and stay removable.
+  const results = query ? await repository.searchProducts(query) : [];
+  const catalog = query ? null : await buildShelfCatalog();
 
   return (
-    <main className="relative pb-10">
+    <main className="relative pb-16">
+      <div className="mx-auto w-full max-w-6xl px-5 md:px-8">
       {/* ─── HERO ───────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden px-5 pt-2 pb-7">
+      <section className="relative overflow-hidden pt-4 pb-7 md:pt-10 md:pb-10">
         {/* Atmospheric corner washes */}
         <span
           aria-hidden
@@ -43,6 +48,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
           }}
         />
 
+        <div className="relative max-w-2xl">
         {/* eyebrow w/ tiny sprout glyph */}
         <p className="relative flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.32em] text-ink-2 anim-rise">
           <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
@@ -60,7 +66,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
 
         {/* Editorial display title */}
         <h1
-          className="relative mt-3 font-display text-[46px] font-semibold leading-[0.92] text-ink anim-rise"
+          className="relative mt-3 font-display text-[46px] font-semibold leading-[0.92] text-ink anim-rise md:text-[60px]"
           style={{ animationDelay: '60ms' }}
         >
           The <span className="mark-leaf font-bold">second</span>
@@ -80,7 +86,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
         >
           <Sonion mood="happy" size={108} halo />
           <div className="pb-2">
-            <p className="text-[13px] leading-snug text-ink">
+            <p className="text-[13px] leading-snug text-ink md:text-[15px]">
               I pull every public rater into one view —{' '}
               <span className="font-display italic font-bold mark-amber" style={{ color: 'var(--ink)' }}>
                 and never hide
@@ -94,8 +100,8 @@ export default async function HomePage({ searchParams }: HomeProps) {
         {/* Search bar — stylized */}
         <form
           method="get"
-          action="/"
-          className="relative mt-7 anim-rise"
+          action="/browse"
+          className="relative mt-7 max-w-xl anim-rise"
           style={{ animationDelay: '220ms' }}
         >
           <div
@@ -141,7 +147,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
             </button>
             {query && (
               <Link
-                href="/"
+                href="/browse"
                 className="rounded-pill bg-card px-3 py-1.5 text-[11px] font-medium text-ink-2"
                 style={{ border: '1px solid var(--line)' }}
               >
@@ -150,20 +156,21 @@ export default async function HomePage({ searchParams }: HomeProps) {
             )}
           </div>
         </form>
+        </div>
       </section>
 
       {/* ─── LEGEND CHIPS ───────────────────────────────────────────────── */}
-      <section className="px-5 pb-4">
+      <section className="pb-5">
         <p className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.20em] text-ink-3">
           <span className="h-px flex-1" style={{ background: 'var(--line)' }} />
           The verdict scale
           <span className="h-px flex-1" style={{ background: 'var(--line)' }} />
         </p>
-        <div className="flex items-stretch gap-1">
+        <div className="flex items-stretch gap-1.5">
           {(['bad', 'poor', 'fair', 'good', 'excellent'] as const).map((band, i) => (
             <div
               key={band}
-              className="flex-1 rounded-pill px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-[0.10em] shadow-card"
+              className="flex-1 rounded-pill px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-[0.10em] shadow-card md:py-2.5 md:text-[11px]"
               style={{
                 background: VERDICT_VAR[band],
                 color: 'var(--card)',
@@ -176,27 +183,23 @@ export default async function HomePage({ searchParams }: HomeProps) {
         </div>
       </section>
 
-      {/* ─── PRODUCT FEED ───────────────────────────────────────────────── */}
-      <section className="px-5">
+      {/* ─── FEED: search results, or your shelf ────────────────────────── */}
+      <section>
+        {!query && catalog ? (
+          <YourShelf catalog={catalog} />
+        ) : (
+          <>
         <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="font-display text-[22px] font-semibold leading-none text-ink">
-            {query ? (
-              <>
-                Results <span className="italic text-ink-2">for</span>{' '}
-                <span style={{ color: 'var(--accent-deep)' }}>“{query}”</span>
-              </>
-            ) : (
-              <>
-                On the <span className="italic" style={{ color: 'var(--accent-deep)' }}>shelf</span>
-              </>
-            )}
+          <h2 className="font-display text-[22px] font-semibold leading-none text-ink md:text-[26px]">
+            Results <span className="italic text-ink-2">for</span>{' '}
+            <span style={{ color: 'var(--accent-deep)' }}>“{query}”</span>
           </h2>
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-3">
-            {products.length} entries
+            {results.length} {results.length === 1 ? 'match' : 'matches'}
           </span>
         </div>
 
-        {products.length === 0 ? (
+        {results.length === 0 ? (
           <div className="relative overflow-hidden rounded-card bg-card px-5 py-7 text-sm text-ink-2 shadow-card halo-tr"
                style={{ border: '1px solid var(--line)', ['--halo' as string]: 'var(--halo-amber)' }}>
             <p className="halo-content font-display italic">Nothing matched yet.</p>
@@ -205,8 +208,8 @@ export default async function HomePage({ searchParams }: HomeProps) {
             </p>
           </div>
         ) : (
-          <ul className="space-y-3.5">
-            {products.map(({ product, brand, pillars }, i) => {
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {results.map(({ product, brand, pillars }, i) => {
               const reps = AXES.map((a) => pillars[a].representative).filter(
                 (r): r is number => r !== null,
               );
@@ -221,16 +224,16 @@ export default async function HomePage({ searchParams }: HomeProps) {
                     : 'var(--halo-clay)';
 
               return (
-                <li key={product.id} className="anim-rise" style={{ animationDelay: `${260 + i * 70}ms` }}>
+                <li key={product.id} className="h-full anim-rise" style={{ animationDelay: `${Math.min(220 + i * 55, 760)}ms` }}>
                   <Link
                     href={`/product/${product.id}`}
-                    className="relative block overflow-hidden rounded-card bg-card shadow-card transition hover:shadow-lift halo-br"
+                    className="relative flex h-full flex-col overflow-hidden rounded-card bg-card shadow-card transition hover:shadow-lift halo-br"
                     style={{
                       border: '1px solid var(--line)',
                       ['--halo' as string]: haloVar,
                     }}
                   >
-                    <div className="halo-content flex items-stretch gap-3 p-3.5">
+                    <div className="halo-content flex flex-1 items-stretch gap-3 p-3.5">
                       {/* Score dial */}
                       <div
                         className="relative flex shrink-0 flex-col items-center justify-center rounded-2xl px-3 py-2"
@@ -286,12 +289,14 @@ export default async function HomePage({ searchParams }: HomeProps) {
             })}
           </ul>
         )}
+          </>
+        )}
       </section>
 
       {/* ─── THESIS FOOTER ─────────────────────────────────────────────── */}
-      <section className="px-5 pt-8">
+      <section className="pt-10">
         <div
-          className="relative overflow-hidden rounded-card px-5 py-5 halo-tl"
+          className="relative overflow-hidden rounded-card px-5 py-5 halo-tl md:px-8 md:py-7"
           style={{
             background: 'var(--espresso)',
             ['--halo' as string]: 'rgba(124, 132, 102, 0.30)',
@@ -301,17 +306,17 @@ export default async function HomePage({ searchParams }: HomeProps) {
           <p className="halo-content font-display text-[10px] font-semibold uppercase tracking-[0.30em]" style={{ color: 'var(--accent-warm)' }}>
             the one rule
           </p>
-          <p className="halo-content mt-2 font-display text-[20px] font-semibold leading-snug">
-            Never <span className="italic mark-amber" style={{ color: 'var(--ink)' }}>blend</span> a score that hides
-            <br />
+          <p className="halo-content mt-2 font-display text-[20px] font-semibold leading-snug md:text-[24px]">
+            Never <span className="italic mark-amber" style={{ color: 'var(--ink)' }}>blend</span> a score that hides{' '}
             <span className="u-bold" style={{ textDecorationColor: 'var(--accent-warm)' }}>who disagrees</span>.
           </p>
-          <p className="halo-content mt-3 text-[11px] leading-relaxed" style={{ color: '#D5CCB7' }}>
+          <p className="halo-content mt-3 max-w-2xl text-[11px] leading-relaxed md:text-[12.5px]" style={{ color: '#D5CCB7' }}>
             Weights are yours, computed at read time, never stored. Funding model
             travels with every rating.
           </p>
         </div>
       </section>
+      </div>
     </main>
   );
 }
