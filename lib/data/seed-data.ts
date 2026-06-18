@@ -79,6 +79,19 @@ export const SOURCES: Source[] = [
     scaleDirection: 'higher_is_better',
     fundingModel: 'nonprofit',
   },
+  // Greenlens's own derived ingredient-safety signal, computed from open EU
+  // regulatory data over each product's INCI list (see lib/ingestion/hazard).
+  // Kept in sync with HAZARD_SOURCE there; duplicated inline so this file keeps
+  // its type-only imports (it's loaded under node's type-stripping seed run).
+  {
+    id: 'ingredient-hazard',
+    name: 'Greenlens Ingredient Scan',
+    axis: 'ingredient_safety',
+    scaleMin: 0,
+    scaleMax: 100,
+    scaleDirection: 'higher_is_better',
+    fundingModel: 'independent',
+  },
 ];
 
 // ─── Brands ─────────────────────────────────────────────────────────────────
