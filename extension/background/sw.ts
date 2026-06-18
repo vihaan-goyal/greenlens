@@ -75,9 +75,16 @@ async function resolveApiUrl(): Promise<string> {
  * when the server is unreachable / errored — the caller treats `undefined` as
  * "fall back to the bundled seed", but a real `null` as "genuinely not rated".
  */
+const API_TIMEOUT_MS = 4000;
+
 async function resolveViaApi(
   s: RawProductSighting,
 ): Promise<VerdictPayload | null | undefined> {
+  // Hard timeout: if the server is down, slow, or blocked (e.g. mid-ingest), we
+  // must NOT hang the worker — abort and fall back to the bundled seed so Sonion
+  // shows a verdict instead of sitting idle forever.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
   try {
     const res = await fetch(await resolveApiUrl(), {
       method: 'POST',
@@ -88,13 +95,16 @@ async function resolveViaApi(
         gtin: s.rawGtin,
         ingredients: s.rawIngredients,
       }),
+      signal: controller.signal,
     });
     if (!res.ok) return undefined;
     const data = (await res.json()) as { match: VerdictPayload | null };
     return data.match;
   } catch {
-    // Server down / not running — let the caller fall back to the bundled seed.
+    // Server down / slow / aborted — let the caller fall back to the bundled seed.
     return undefined;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
