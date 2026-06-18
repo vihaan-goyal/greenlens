@@ -12,6 +12,7 @@ import {
 import { defaultWeights, overall, overallRange, topMarginalDriver } from '@/lib/domain/scoring';
 import { VERDICT_LABEL, VERDICT_VAR, verdictBand } from '@/lib/domain/verdict';
 import { Sonion, type SonionMood } from '@/components/Sonion';
+import { SITE_URL, productUrl } from '../shared/config';
 
 /** Where we are inside the popup. Two screens, no real router. */
 type Nav = { kind: 'verdict' } | { kind: 'flag'; slug: string };
@@ -99,7 +100,11 @@ export function Popup() {
     <main>
       <header className="gl-header">
         <div>
-          <h1 className="gl-wordmark">Greenlens</h1>
+          <h1 className="gl-wordmark">
+            <a href={SITE_URL} target="_blank" rel="noreferrer noopener" title="Open Greenlens">
+              Greenlens
+            </a>
+          </h1>
           <p className="gl-header-tag">For your weighting</p>
         </div>
         <Sonion mood={mood} size={42} idle />
@@ -223,6 +228,15 @@ function ProductPanel({
           onOpenFlag={onOpenFlag}
         />
       ))}
+
+      <a
+        className="gl-site-link"
+        href={productUrl(payload.product.id)}
+        target="_blank"
+        rel="noreferrer noopener"
+      >
+        Open the full breakdown <span aria-hidden>↗</span>
+      </a>
     </section>
   );
 }

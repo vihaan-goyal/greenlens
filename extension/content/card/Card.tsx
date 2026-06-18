@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { VerdictPayload } from '../../shared/messages';
 import { overall, overallRange, topMarginalDriver } from '@/lib/domain/scoring';
 import { VERDICT_LABEL, VERDICT_VAR, verdictBand } from '@/lib/domain/verdict';
 import { AXIS_PHRASE, type Weights } from '@/lib/domain/types';
 import { Sonion, type SonionMood } from '@/components/Sonion';
 import { Floater } from './Floater';
+import { usePanel } from './usePanel';
+import { productUrl } from '../../shared/config';
 
 interface Props {
   payload: VerdictPayload;
@@ -20,7 +22,7 @@ interface Props {
  * We never persist or transmit the blended number.
  */
 export function Card({ payload, weights }: Props) {
-  const [open, setOpen] = useState(false);
+  const { open, toggle, close, ref: cardRef, cardClass } = usePanel();
   const range = useMemo(() => overallRange(payload.pillars, weights), [payload, weights]);
   const o = useMemo(() => overall(payload.pillars, weights), [payload, weights]);
   const band = verdictBand(o);
@@ -32,13 +34,13 @@ export function Card({ payload, weights }: Props) {
   const markClass = MARK_BY_BAND[band ?? 'sand'];
 
   return (
-    <Floater onDragStart={() => setOpen(false)}>
-    <div className="gl-card" data-band={band ?? 'none'}>
+    <Floater onDragStart={close} dragDisabled={open}>
+    <div ref={cardRef} className={cardClass} data-band={band ?? 'none'}>
       <button
         type="button"
         className="gl-trigger"
         aria-label={`Greenlens verdict: ${verdictLine} (${o === null ? 'no data' : Math.round(o)} out of 100)`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
       >
         <Sonion mood={mood} size={60} idle={!open} />
         <span className="gl-trigger-text">
@@ -109,8 +111,16 @@ export function Card({ payload, weights }: Props) {
               </span>
             ))}
           </div>
+          <a
+            className="gl-report-link"
+            href={productUrl(payload.product.id)}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            See the full breakdown <span aria-hidden>↗</span>
+          </a>
           <p className="gl-foot">
-            Open the toolbar icon for full pillar controls and rater-by-rater detail.
+            Opens the full Greenlens report — dial, weight controls, and rater-by-rater detail.
           </p>
         </div>
       )}

@@ -1,6 +1,7 @@
-import { useState } from 'react';
 import { Sonion } from '@/components/Sonion';
 import { Floater } from './Floater';
+import { usePanel } from './usePanel';
+import { SITE_URL } from '../../shared/config';
 
 interface Props {
   rawName: string;
@@ -12,15 +13,15 @@ interface Props {
  * recall is a known weakness CLAUDE.md says to surface, not hide.
  */
 export function UnknownCard({ rawName }: Props) {
-  const [open, setOpen] = useState(false);
+  const { open, toggle, close, ref: cardRef, cardClass } = usePanel();
   return (
-    <Floater onDragStart={() => setOpen(false)}>
-      <div className="gl-card" data-band="none">
+    <Floater onDragStart={close} dragDisabled={open}>
+      <div ref={cardRef} className={cardClass} data-band="none">
         <button
           type="button"
           className="gl-trigger"
           aria-label="Greenlens: product not in catalog yet"
-          onClick={() => setOpen((v) => !v)}
+          onClick={toggle}
         >
           <Sonion mood="neutral" size={60} idle={!open} />
           <span className="gl-trigger-text">
@@ -39,6 +40,14 @@ export function UnknownCard({ rawName }: Props) {
               the catalog is genuinely worse, and we&apos;d rather say so than fake
               a number.
             </p>
+            <a
+              className="gl-report-link"
+              href={`${SITE_URL}/browse`}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              Search the catalog <span aria-hidden>↗</span>
+            </a>
             <p className="gl-foot">Use the toolbar icon to adjust your weighting in the meantime.</p>
           </div>
         )}

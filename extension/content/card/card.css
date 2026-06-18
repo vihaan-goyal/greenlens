@@ -8,6 +8,13 @@
 
 .gl-card * { box-sizing: border-box; }
 
+/* Anchor for the absolutely-positioned info panel; keeps the pill itself the
+   only thing in the floater's flow so opening the panel never shoves it. */
+.gl-card {
+  position: relative;
+  display: inline-block;
+}
+
 /* ── Floater (drag wrapper) ───────────────────────────────────────────── */
 /* The Floater sets `position: fixed` inline. Visual states are toggled via
    classnames so we can drive cursor + magnet cues without inline juggling. */
@@ -25,6 +32,10 @@
     0 0 0 9px var(--pop-tint),
     0 6px 12px rgba(46, 42, 34, 0.18),
     0 26px 50px -10px rgba(46, 42, 34, 0.48);
+}
+/* Panel open → dragging is locked, so show a plain pointer, not the grab grip */
+.gl-floater-locked .gl-trigger {
+  cursor: pointer;
 }
 /* Near the home corner during drag — gentle pulse hints the magnet is on */
 .gl-floater-near-home .gl-trigger {
@@ -143,13 +154,26 @@
 .gl-trigger-band[data-band="bad"]       { background: var(--verdict-bad); }
 
 .gl-panel {
-  margin-top: 10px;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
   width: 320px;
   padding: 18px 18px 14px;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 18px;
   box-shadow: var(--shadow-lift);
+  z-index: 1;
+}
+/* Flip above the pill when there isn't room below (near the bottom / at home). */
+.gl-card.gl-open-up .gl-panel {
+  top: auto;
+  bottom: calc(100% + 10px);
+}
+/* Anchor to the left edge when the pill sits in the left half of the screen. */
+.gl-card.gl-anchor-left .gl-panel {
+  right: auto;
+  left: 0;
 }
 .gl-panel-head { margin-bottom: 10px; }
 .gl-eyebrow {
@@ -249,6 +273,28 @@
   font-size: 11px;
   color: var(--ink-3);
   margin: 0;
+}
+
+/* Deep link out to the full report on the web app. */
+.gl-report-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent-deep);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 140ms ease, opacity 140ms ease;
+}
+.gl-report-link:hover {
+  border-bottom-color: var(--accent-deep);
+}
+.gl-report-link:focus-visible {
+  outline: 2px solid var(--accent-deep);
+  outline-offset: 2px;
+  border-radius: 3px;
 }
 
 /* ── highlighter marks + editorial underline ─────────────────────────── */

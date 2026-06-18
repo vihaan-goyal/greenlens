@@ -17,6 +17,11 @@ import manifest from './manifest.json' with { type: 'json' };
 // extension reload — only on the next navigation).
 const BUILD_ID = new Date().toISOString();
 
+// Base URL of the Greenlens web app the extension links out to. Overridable at
+// build time (`GL_SITE_URL=https://greenlens.app npm run build`); defaults to
+// the local dev server so a freshly-built extension links somewhere that works.
+const SITE_URL = process.env.GL_SITE_URL ?? 'http://localhost:3000';
+
 export default defineConfig({
   root: __dirname,
   // CRXJS has its own narrower ManifestV3 type that doesn't perfectly line up
@@ -24,6 +29,7 @@ export default defineConfig({
   plugins: [react(), crx({ manifest: manifest as unknown as Parameters<typeof crx>[0]['manifest'] })],
   define: {
     __GL_BUILD__: JSON.stringify(BUILD_ID),
+    __GL_SITE_URL__: JSON.stringify(SITE_URL),
   },
   resolve: {
     alias: {
