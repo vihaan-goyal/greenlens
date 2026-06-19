@@ -21,6 +21,7 @@
     "db:ethics": "node --env-file=.env --experimental-strip-types --import ./scripts/register-ts.mjs scripts/derive-brand-ethics.ts",
     "db:packaging": "node --env-file=.env --experimental-strip-types --import ./scripts/register-ts.mjs scripts/derive-packaging.ts",
     "db:recall": "node --env-file=.env --experimental-strip-types --import ./scripts/register-ts.mjs scripts/recall-by-brand-size.ts",
+    "matcher:train": "node --env-file=.env --experimental-strip-types --import ./scripts/register-ts.mjs scripts/train-matcher.ts",
     "db:reset": "prisma db push --force-reset && npm run db:seed",
     "postinstall": "prisma generate"
   },
