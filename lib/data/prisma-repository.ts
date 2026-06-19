@@ -14,6 +14,7 @@ import {
 } from '../domain/types';
 import { summarizePillars } from '../domain/scoring';
 import { canonicalizeBrand } from '../matcher/blocking';
+import { normalizeName } from '../matcher/features';
 import type { CatalogEntry } from '../matcher/matcher';
 import type { IngestResult } from '../ingestion/open-beauty-facts';
 import { prisma } from './prisma';
@@ -224,19 +225,29 @@ export class PrismaProductRepository implements ProductRepository {
     ]);
     const brands = brandRows.map(toBrand);
     const nameById = new Map(brands.map((b) => [b.id, b.name] as const));
-    const catalog: CatalogEntry[] = productRows.map((row) => {
-      const p = toProduct(row as ProductRow);
-      return {
-        id: p.id,
-        productId: p.id,
-        brand: nameById.get(p.brandId),
-        name: p.displayName,
-        gtin: p.gtin,
-        ingredients: p.ingredients,
-        sizeValue: p.sizeValue,
-        sizeUnit: p.sizeUnit,
-      };
-    });
+    const catalog: CatalogEntry[] = productRows
+      .map((row) => {
+        const p = toProduct(row as ProductRow);
+        return {
+          id: p.id,
+          productId: p.id,
+          brand: nameById.get(p.brandId),
+          name: p.displayName,
+          gtin: p.gtin,
+          ingredients: p.ingredients,
+          sizeValue: p.sizeValue,
+          sizeUnit: p.sizeUnit,
+        };
+      })
+      // Drop products whose name is empty under the matcher's own normalization
+      // (OBF rows with a "." placeholder or a non-Latin-only name). Their
+      // normalized name is "", so name-similarity scores 1.0 against every other
+      // such row and they pile up as false near-ties — ~99% of all `ambiguous`
+      // flags traced back to these. They also have no displayable name, so they
+      // can never be a useful match. Tradeoff: a sighting that carries an exact
+      // GTIN for one of these no-name rows won't resolve, which is acceptable —
+      // we'd have nothing to show for it anyway.
+      .filter((c) => normalizeName(c.name) !== '');
     return { catalog, brands };
   }
 
