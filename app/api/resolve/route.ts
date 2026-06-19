@@ -1,0 +1,109 @@
+// Live resolve endpoint for the browser extension.
+//
+// The extension service worker can't run Prisma in the browser, so it POSTs a
+// product sighting here; this route runs the same /lib/matcher pipeline against
+// the *full* Prisma catalog (thousands of ingested products, not the 17-item
+// mock the extension bundles) and returns the verdict for the matched product.
+//
+// Reads through the shared `repository` accessor — the SAME catalog the UI
+// renders — so a match here always resolves to a product the "see full
+// breakdown" page can load. Run the app with GREENLENS_REPO=prisma (npm run
+// dev:full) to match against the full ingested catalog; plain `npm run dev`
+// matches the 17-product seed. Needs the Node runtime (Prisma) and must never be
+// statically cached (the catalog grows as you ingest).
+
+import { NextResponse } from 'next/server';
+import { repository } from '@/lib/data';
+import { resolveItem } from '@/lib/matcher/matcher';
+import type { MatchableItem } from '@/lib/matcher/features';
+import type { VerdictPayload } from '@/extension/shared/messages';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+// The caller is a chrome-extension:// origin, so CORS is required. This is a
+// local-dev convenience endpoint; `*` is fine — it returns only public rating
+// data and reads nothing from the request but the product fields.
+const CORS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'content-type',
+};
+
+export function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
+
+interface SightingBody {
+  brand?: unknown;
+  name?: unknown;
+  gtin?: unknown;
+  ingredients?: unknown;
+}
+
+const asString = (v: unknown): string | undefined =>
+  typeof v === 'string' && v.trim() ? v.trim() : undefined;
+
+// The match context (every product + brand in the matcher's shape) is the same
+// for every sighting and is the expensive part — a full-catalog read that grows
+// with ingestion. Cache it briefly so a burst of page views doesn't re-scan the
+// whole table each time. The TTL keeps it fresh enough to pick up new ingests
+// within a minute; the matched product itself is always read live (uncached).
+type MatchContext = Awaited<ReturnType<typeof repository.loadMatchContext>>;
+const CONTEXT_TTL_MS = 30_000;
+let contextCache: { at: number; data: MatchContext } | null = null;
+
+async function loadMatchContextCached(): Promise<MatchContext> {
+  const now = Date.now();
+  if (contextCache && now - contextCache.at < CONTEXT_TTL_MS) return contextCache.data;
+  const data = await repository.loadMatchContext();
+  contextCache = { at: now, data };
+  return data;
+}
+
+export async function POST(req: Request) {
+  let body: SightingBody;
+  try {
+    body = (await req.json()) as SightingBody;
+  } catch {
+    return NextResponse.json({ error: 'invalid json' }, { status: 400, headers: CORS });
+  }
+
+  const name = asString(body.name);
+  if (!name) {
+    // No name → nothing to match on. Return a definitive "no match" (200) so the
+    // extension shows "not yet rated" rather than treating it as a server error.
+    return NextResponse.json({ match: null }, { headers: CORS });
+  }
+
+  const ingredients = Array.isArray(body.ingredients)
+    ? body.ingredients.filter((x): x is string => typeof x === 'string' && x.length > 0)
+    : undefined;
+
+  const item: MatchableItem = {
+    id: 'sighting',
+    brand: asString(body.brand),
+    name,
+    gtin: asString(body.gtin),
+    ingredients: ingredients && ingredients.length ? ingredients : undefined,
+  };
+
+  const { catalog, brands } = await loadMatchContextCached();
+  const match = resolveItem(item, catalog, brands);
+  if (!match) return NextResponse.json({ match: null }, { headers: CORS });
+
+  const view = await repository.getProduct(match.productId);
+  if (!view) return NextResponse.json({ match: null }, { headers: CORS });
+  const flags = await repository.listIngredientFlags(match.productId);
+
+  const payload: VerdictPayload = {
+    product: view.product,
+    brand: view.brand,
+    pillars: view.pillars,
+    sources: view.sources,
+    flags,
+    matchConfidence: match.confidence,
+    ambiguous: match.ambiguous,
+  };
+  return NextResponse.json({ match: payload }, { headers: CORS });
+}

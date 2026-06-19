@@ -79,6 +79,46 @@ export const SOURCES: Source[] = [
     scaleDirection: 'higher_is_better',
     fundingModel: 'nonprofit',
   },
+  // Greenlens's own derived ingredient-safety signal, computed from open EU
+  // regulatory data over each product's INCI list (see lib/ingestion/hazard).
+  // Kept in sync with HAZARD_SOURCE there; duplicated inline so this file keeps
+  // its type-only imports (it's loaded under node's type-stripping seed run).
+  {
+    id: 'ingredient-hazard',
+    name: 'Greenlens Ingredient Scan',
+    axis: 'ingredient_safety',
+    scaleMin: 0,
+    scaleMax: 100,
+    scaleDirection: 'higher_is_better',
+    fundingModel: 'independent',
+  },
+  // Brand-level cruelty-free / vegan certification (Leaping Bunny, PETA), on the
+  // labor/ethics axis. Kept in sync with BRAND_ETHICS_SOURCE in
+  // lib/ingestion/brand-ethics; duplicated inline so this file keeps its
+  // type-only imports for the node type-stripping seed run.
+  {
+    id: 'cruelty-free',
+    name: 'Cruelty-Free Certification',
+    axis: 'labor',
+    scaleMin: 0,
+    scaleMax: 100,
+    scaleDirection: 'higher_is_better',
+    fundingModel: 'nonprofit',
+  },
+  // Greenlens's own derived packaging-recyclability signal, computed from open
+  // packaging standards over each product's OBF packaging-material tags (see
+  // lib/ingestion/packaging). On the packaging axis, so it can disagree with the
+  // How2Recycle label rater. Kept in sync with PACKAGING_SOURCE there; duplicated
+  // inline so this file keeps its type-only imports for the node seed run.
+  {
+    id: 'packaging-scan',
+    name: 'Greenlens Packaging Scan',
+    axis: 'packaging',
+    scaleMin: 0,
+    scaleMax: 100,
+    scaleDirection: 'higher_is_better',
+    fundingModel: 'independent',
+  },
 ];
 
 // ─── Brands ─────────────────────────────────────────────────────────────────

@@ -29,7 +29,17 @@ export interface FeatureScores {
   gtinExact?: boolean;
   /** Jaro-Winkler over normalized full names, 0..1. */
   nameJaroWinkler?: number;
-  /** Token-set Jaccard over name tokens, 0..1. */
+  /**
+   * Token containment over name tokens: |A ∩ B| / min(|A|, |B|), 0..1. Same
+   * Szymkiewicz-Simpson overlap used for ingredients, and for the same reason —
+   * the catalog holds a short canonical name ("Daily Moisturizing Lotion") while
+   * a real Amazon title is a long marketing string ("Aveeno Daily Moisturizing
+   * Sheer Hydration Fragrance-Free Lotion with Prebiotic Oat…"). Symmetric
+   * Jaccard collapses to near-zero on that length gap even when every catalog
+   * token is present; overlap rewards the containment, which is the actual
+   * "same product" signal. Brand match + the threshold guard against a short
+   * generic name spuriously containing into an unrelated title.
+   */
   nameTokenSet?: number;
   /** Canonical brand match after alias resolution. */
   brandMatch?: boolean;
@@ -90,7 +100,7 @@ export function computeFeatures(
   const nB = normalizeName(b.name);
   if (nA && nB) {
     out.nameJaroWinkler = jaroWinkler(nA, nB);
-    out.nameTokenSet = jaccard(new Set(nA.split(' ')), new Set(nB.split(' ')));
+    out.nameTokenSet = overlapCoefficient(new Set(nA.split(' ')), new Set(nB.split(' ')));
   }
 
   if (a.brand && b.brand) {

@@ -1,4 +1,5 @@
-import { AXES, type Axis, type IngredientFlag, type Product } from '../domain/types';
+import { AXES, type Axis, type Brand, type IngredientFlag, type Product } from '../domain/types';
+import type { CatalogEntry } from '../matcher/matcher';
 import { summarizePillars } from '../domain/scoring';
 import {
   BRANDS,
@@ -110,6 +111,21 @@ export class MockProductRepository implements ProductRepository {
 
   async listIngredientFlags(productId: string): Promise<IngredientFlag[]> {
     return INGREDIENT_FLAGS.filter((f) => f.productId === productId);
+  }
+
+  async loadMatchContext(): Promise<{ catalog: CatalogEntry[]; brands: Brand[] }> {
+    const nameById = new Map(BRANDS.map((b) => [b.id, b.name] as const));
+    const catalog: CatalogEntry[] = PRODUCTS.map((p) => ({
+      id: p.id,
+      productId: p.id,
+      brand: nameById.get(p.brandId),
+      name: p.displayName,
+      gtin: p.gtin,
+      ingredients: p.ingredients,
+      sizeValue: p.sizeValue,
+      sizeUnit: p.sizeUnit,
+    }));
+    return { catalog, brands: BRANDS };
   }
 }
 

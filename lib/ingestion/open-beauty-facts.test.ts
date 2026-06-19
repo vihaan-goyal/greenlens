@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   extractIngredients,
+  extractPackagingMaterials,
   extractRatings,
   fetchOpenBeautyFacts,
   ingestBarcode,
@@ -81,6 +82,35 @@ describe('normalization helpers', () => {
     expect(ingredients).not.toContain('');
     expect(ingredients).toHaveLength(7);
   });
+
+  it('prefers structured packaging materials over the tag fallbacks', () => {
+    const product = obfResponseSchema.parse({
+      status: 1,
+      product: {
+        packagings: [{ material: 'en:glass', shape: 'en:bottle' }, { material: 'en:pp' }],
+        packaging_materials_tags: ['en:plastic'],
+        packaging_tags: ['en:bottle'],
+      },
+    }).product!;
+    expect(extractPackagingMaterials(product)).toEqual(['en:glass', 'en:pp']);
+  });
+
+  it('falls back to material tags, then mixed packaging tags', () => {
+    const materialOnly = obfResponseSchema.parse({
+      status: 1,
+      product: { packaging_materials_tags: ['en:glass'], packaging_tags: ['en:bottle'] },
+    }).product!;
+    expect(extractPackagingMaterials(materialOnly)).toEqual(['en:glass']);
+
+    const tagsOnly = obfResponseSchema.parse({
+      status: 1,
+      product: { packaging_tags: ['en:glass', 'en:bottle'] },
+    }).product!;
+    expect(extractPackagingMaterials(tagsOnly)).toEqual(['en:glass', 'en:bottle']);
+
+    const none = obfResponseSchema.parse({ status: 1, product: {} }).product!;
+    expect(extractPackagingMaterials(none)).toEqual([]);
+  });
 });
 
 describe('normalizeListing + extractRatings', () => {
@@ -125,6 +155,15 @@ describe('fetchOpenBeautyFacts', () => {
     await expect(
       fetchOpenBeautyFacts('301871239019', { fetchImpl: mockFetch({}, false) }),
     ).rejects.toThrow();
+  });
+
+  it('treats a 404 (OBF\'s "unknown barcode" status) as not-found, not an error', async () => {
+    const fetch404 = (async () => ({
+      ok: false,
+      status: 404,
+      json: async () => NOT_FOUND_RESPONSE,
+    })) as unknown as typeof fetch;
+    await expect(fetchOpenBeautyFacts('0000000000000', { fetchImpl: fetch404 })).resolves.toBeNull();
   });
 });
 

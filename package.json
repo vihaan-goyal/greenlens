@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:full": "node scripts/dev-full.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -15,6 +16,10 @@
     "icons": "node extension/scripts/make-icons.mjs",
     "db:push": "prisma db push",
     "db:seed": "node --env-file=.env --experimental-strip-types prisma/seed.ts",
+    "db:ingest": "node --env-file=.env --experimental-strip-types --import ./scripts/register-ts.mjs scripts/ingest-obf.ts",
+    "db:hazard": "node --env-file=.env --experimental-strip-types --import ./scripts/register-ts.mjs scripts/derive-hazard.ts",
+    "db:ethics": "node --env-file=.env --experimental-strip-types --import ./scripts/register-ts.mjs scripts/derive-brand-ethics.ts",
+    "db:packaging": "node --env-file=.env --experimental-strip-types --import ./scripts/register-ts.mjs scripts/derive-packaging.ts",
     "db:reset": "prisma db push --force-reset && npm run db:seed",
     "postinstall": "prisma generate"
   },

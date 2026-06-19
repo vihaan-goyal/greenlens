@@ -266,4 +266,52 @@ describe('matcher / resolveItem — live extension lookup', () => {
     const r = resolveItem(longSighting, catalog, BRANDS);
     expect(r?.productId).toBe('prod-B');
   });
+
+  // Regression: the catalog stores a short canonical name ("Daily Glow Serum"),
+  // but a real Amazon title is a long marketing string that *prefixes the brand*
+  // and buries the catalog tokens among 20+ others. Symmetric Jaccard on name
+  // tokens collapsed to ~0.1 and, combined with a partial ingredient overlap,
+  // dropped the match below threshold (the reported "NOT IN CATALOG" bug). The
+  // overlap coefficient on name tokens rewards the containment so brand + name
+  // carry it. This mirrors the Aveeno "Daily Moisturizing Lotion" case.
+  it('matches a long marketing title whose catalog name omits the brand', () => {
+    const marketingTitle: MatchableItem = {
+      id: 'amzn-marketing',
+      brand: 'BigA',
+      name:
+        'BigA Daily Glow Serum Sheer Brightening Vitamin C Face Serum with Hyaluronic ' +
+        'Acid for Dull Skin, Lightweight, Fast-Absorbing, Fragrance-Free, 30ml / 1.0 Fl Oz',
+      // Page lists a fuller INCI than the catalog's 5; overlap stays partial.
+      ingredients: [
+        'aqua', 'ascorbic acid', 'glycerin', 'propylene glycol', 'ferulic acid',
+        'phenoxyethanol', 'sodium hyaluronate', 'panthenol', 'tocopherol',
+      ],
+    };
+    const r = resolveItem(marketingTitle, catalog, BRANDS);
+    expect(r?.productId).toBe('prod-A');
+  });
+
+  it('does not flag a clean win as ambiguous', () => {
+    const r = resolveItem(LISTINGS.find((l) => l.id === 'B-stripped')!, catalog, BRANDS);
+    expect(r?.productId).toBe('prod-B');
+    expect(r?.ambiguous).toBe(false);
+  });
+
+  // Precision guard: two same-brand siblings ("Glow Serum" vs "Glow Serum Plus")
+  // can both clear the threshold for a vague title. The matcher still returns the
+  // best one (recall preserved) but marks it ambiguous so the UI can hedge rather
+  // than confidently present a near-coin-flip.
+  it('flags ambiguity when a different product scores within the margin', () => {
+    // Two near-duplicate canonical entries (same name, different productId) — the
+    // exact "are these the same product?" gap. Both score alike for the sighting,
+    // so the winner is within the margin of a different product → ambiguous.
+    const siblings: CatalogEntry[] = [
+      { productId: 'prod-glow', id: 'cat-glow', brand: 'BigA', name: 'Daily Glow Serum' },
+      { productId: 'prod-glow-dup', id: 'cat-glow-dup', brand: 'BigA', name: 'Daily Glow Serum' },
+    ];
+    const vague: MatchableItem = { id: 'sighting', brand: 'BigA', name: 'BigA Daily Glow Serum' };
+    const r = resolveItem(vague, siblings, BRANDS);
+    expect(r).not.toBeNull();
+    expect(r!.ambiguous).toBe(true);
+  });
 });

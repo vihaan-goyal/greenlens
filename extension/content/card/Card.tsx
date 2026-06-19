@@ -59,6 +59,12 @@ export function Card({ payload, weights }: Props) {
             <p className="gl-eyebrow">For your weighting</p>
             <h2 className="gl-title">{payload.product.displayName}</h2>
             <p className="gl-brand">{payload.brand.name}</p>
+            {payload.ambiguous && (
+              <p className="gl-ambiguous">
+                Closest match — a similar product scored almost as well, so this may
+                not be the exact item.
+              </p>
+            )}
           </header>
           <p className="gl-sonion-line">
             {driver && o !== null ? (

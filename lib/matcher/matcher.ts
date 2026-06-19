@@ -56,14 +56,31 @@ export interface ResolveResult {
   productId: string;
   /** Same scale as ClusterResult — comparable across calls. */
   confidence: number;
+  /**
+   * True when a *different* product scored within AMBIGUITY_MARGIN of the winner
+   * — two similar candidates (usually same-brand siblings like a lotion vs a
+   * cream) are nearly tied, so the winner is a best guess rather than a confident
+   * call. The match is still returned (recall is preserved); the UI can hedge the
+   * wording so we never silently present a near-coin-flip as certain.
+   */
+  ambiguous: boolean;
   /** Useful for the SW log and debug overlay; never shown to users. */
   reason: string;
 }
 
 /**
+ * How close a runner-up (different product) must be to the winner before the
+ * match is called ambiguous. Tuned below the gap the features normally open up
+ * between siblings (e.g. lotion 0.85 vs cream 0.80 ≈ 0.05) so a clean win isn't
+ * flagged, but a genuine near-tie is.
+ */
+export const AMBIGUITY_MARGIN = 0.04;
+
+/**
  * Resolve one item (a Listing or a sighting) against a canonical catalog.
  * Returns null when no candidate clears the threshold — let the UI show the
- * "Not yet rated" state rather than a low-confidence false match.
+ * "Not yet rated" state rather than a low-confidence false match. Never merges
+ * products: it returns exactly one canonical product, or none.
  */
 export function resolveItem(
   item: MatchableItem,
@@ -73,18 +90,30 @@ export function resolveItem(
 ): ResolveResult | null {
   const itemKeys = new Set(blockKeys(item, brands));
   if (itemKeys.size === 0) return null;
-  let best: { entry: CatalogEntry; score: number } | null = null;
+
+  // Score every blocked candidate, then pick the winner *and* check the best
+  // competitor that resolves to a different product, so two near-tied siblings
+  // surface as ambiguous instead of one silently winning.
+  const hits: Array<{ entry: CatalogEntry; score: number }> = [];
   for (const entry of catalog) {
     const entryKeys = blockKeys(entry, brands);
     if (!entryKeys.some((k) => itemKeys.has(k))) continue;
-    const f = computeFeatures(item, entry, brands);
-    const s = score(f);
-    if (s >= threshold && (!best || s > best.score)) best = { entry, score: s };
+    const s = score(computeFeatures(item, entry, brands));
+    if (s >= threshold) hits.push({ entry, score: s });
   }
-  if (!best) return null;
+  if (hits.length === 0) return null;
+
+  hits.sort((a, b) => b.score - a.score);
+  const best = hits[0]!;
+  const runnerUp = hits.find((h) => h.entry.productId !== best.entry.productId);
+  const ambiguous = !!runnerUp && best.score - runnerUp.score < AMBIGUITY_MARGIN;
+
   return {
     productId: best.entry.productId,
     confidence: best.score,
-    reason: `matched ${best.entry.id} at ${best.score.toFixed(2)}`,
+    ambiguous,
+    reason: ambiguous
+      ? `matched ${best.entry.id} at ${best.score.toFixed(2)} (ambiguous vs ${runnerUp!.entry.id} ${runnerUp!.score.toFixed(2)})`
+      : `matched ${best.entry.id} at ${best.score.toFixed(2)}`,
   };
 }
