@@ -29,6 +29,7 @@ export const FEATURE_ORDER: readonly FeatureKey[] = [
   'brandMatch',
   'ingredientsOverlap',
   'sizeMatch',
+  'variantConflict',
 ] as const;
 
 /** Two columns per feature: its value (0 when absent) then a present flag. */

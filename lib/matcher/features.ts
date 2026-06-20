@@ -58,6 +58,24 @@ export interface FeatureScores {
   ingredientsOverlap?: number;
   /** Same numeric size, same unit family (ml↔ml, oz↔oz). */
   sizeMatch?: boolean;
+  /**
+   * Variant-token CONFLICT: true when both names expose the same kind of variant
+   * marker but the values disagree — "...SPF 60" vs "...SPF 30", shade "...150"
+   * vs "...350", "2%" vs "5%", "AM" vs "PM". These are head-brand siblings: they
+   * share almost every token but the one that decides which physical product
+   * (and which safety data) you're looking at.
+   *
+   * The name features can't carry this — nameTokenSet is a containment coefficient
+   * and nameJaroWinkler is character-level, so both score a sibling pair near-1
+   * (every token but one is shared). This is modeled as a one-sided NEGATIVE
+   * signal: true is strong "different product" evidence, and the field is left
+   * UNDEFINED (neutral) when the variants agree or aren't comparable. Agreement is
+   * deliberately not rewarded — the other features already carry a genuine match,
+   * and a small "agree" bonus risks dragging a sparse real match (brand+shade
+   * only) below threshold. Read off the RAW name, not the normalized one, because
+   * normalizeName strips the "%" that distinguishes a concentration token.
+   */
+  variantConflict?: boolean;
 }
 
 /** Public alias so blocking/score don't import directly from a deep file. */
@@ -126,7 +144,80 @@ export function computeFeatures(
     out.sizeMatch = sizesEqual(a.sizeValue, a.sizeUnit, b.sizeValue, b.sizeUnit);
   }
 
+  if (variantTokensConflict(a.name, b.name)) out.variantConflict = true;
+
   return out;
+}
+
+// ─── variant tokens ───────────────────────────────────────────────────────────
+// Markers that distinguish near-identical SKUs of the same brand. Each kind is a
+// real sibling case in eval-pairs.ts. Deliberately NOT included: size/quantity
+// (owned by sizeMatch) and "refill"/pack tokens (same product, different pack
+// — see eval e6), which must never read as a variant conflict.
+
+/**
+ * Parse variant markers off a raw product name into a `kind → value` map.
+ * Operates on the raw (un-normalized) name so the "%" on a concentration and
+ * the digits glued to a unit ("32ml") survive for the rules below.
+ */
+export function extractVariantTokens(name: string): Map<string, string> {
+  const s = name.toLowerCase();
+  const tokens = new Map<string, string>();
+
+  const spf = s.match(/\bspf\s*(\d+)/);
+  if (spf) tokens.set('spf', spf[1]!);
+
+  // Active concentration — needs the literal "%", so this must run on the raw name.
+  const pct = s.match(/(\d+(?:\.\d+)?)\s*%/);
+  if (pct) tokens.set('pct', pct[1]!);
+
+  // Day/night formula marker (CeraVe AM vs PM).
+  const ampm = s.match(/\b(am|pm)\b/);
+  if (ampm) tokens.set('ampm', ampm[1]!);
+
+  const shade = shadeNumber(s);
+  if (shade) tokens.set('shade', shade);
+
+  return tokens;
+}
+
+/**
+ * A makeup shade number. Prefers an explicit "shade N"; otherwise, only in a
+ * shaded-product context (foundation/concealer/…), the trailing bare integer
+ * that isn't the SPF number and isn't glued-or-spaced to a size unit. The
+ * `\b…\b` guard already skips "32ml" (no boundary before the unit); the
+ * lookahead additionally skips the spaced "32 ml" form.
+ */
+function shadeNumber(s: string): string | null {
+  const explicit = s.match(/\bshade\s*(?:no\.?\s*)?(\d{1,4})\b/);
+  if (explicit) return explicit[1]!;
+  if (!/\b(foundation|concealer|corrector|tint|cushion|powder)\b/.test(s)) return null;
+  const spf = s.match(/\bspf\s*(\d+)/)?.[1];
+  const candidates = [...s.matchAll(/\b(\d{2,4})\b(?!\s*(?:ml|oz|g|kg|l|fl|ounce|ounces|gram|grams|pack|count|ct))/g)]
+    .map((m) => m[1]!)
+    .filter((n) => n !== spf);
+  return candidates.length ? candidates[candidates.length - 1]! : null;
+}
+
+/**
+ * True when the two names share a variant kind whose values disagree (different
+ * SKU). A shared-and-agreeing kind, or no shared kind, is not a conflict.
+ */
+export function variantTokensConflict(nameA: string, nameB: string): boolean {
+  const a = extractVariantTokens(nameA);
+  const b = extractVariantTokens(nameB);
+  for (const [kind, valA] of a) {
+    const valB = b.get(kind);
+    if (valB === undefined) continue;
+    if (!variantValuesEqual(kind, valA, valB)) return true;
+  }
+  return false;
+}
+
+function variantValuesEqual(kind: string, a: string, b: string): boolean {
+  if (kind === 'ampm') return a === b;
+  // Numeric kinds: compare by value so "030" === "30" and "2" === "2.0".
+  return Number(a) === Number(b);
 }
 
 function sizesEqual(va: number, ua: string, vb: number, ub: string): boolean {

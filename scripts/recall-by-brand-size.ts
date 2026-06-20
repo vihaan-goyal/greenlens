@@ -19,9 +19,12 @@
 // Run (needs DATABASE_URL from .env, and the .ts resolution hook):
 //   npm run db:recall
 //   npm run db:recall -- --per-bucket 400          # bigger sample per bucket
+//   npm run db:recall -- --per-bucket 5000         # whole catalog (no sampling)
 //   npm run db:recall -- --keep-gtin               # sightings carry the barcode
+//   npm run db:recall -- --seed 7                  # different reproducible sample
 
 import { prismaRepository } from '../lib/data/prisma-repository';
+import { mulberry32 } from '../lib/matcher/labeling';
 import type { CatalogEntry } from '../lib/matcher/matcher';
 import {
   aggregateByBucket,
@@ -40,14 +43,16 @@ const DEFAULT_PER_BUCKET = 250;
 interface Args {
   perBucket: number;
   keepGtin: boolean;
+  seed: number;
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { perBucket: DEFAULT_PER_BUCKET, keepGtin: false };
+  const args: Args = { perBucket: DEFAULT_PER_BUCKET, keepGtin: false, seed: 1234 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--per-bucket') args.perBucket = Number(argv[++i]) || DEFAULT_PER_BUCKET;
     else if (a === '--keep-gtin') args.keepGtin = true;
+    else if (a === '--seed') args.seed = Number(argv[++i]) || args.seed;
   }
   return args;
 }
@@ -64,7 +69,11 @@ async function main() {
   for (const e of catalog) {
     byBucket.get(bucketForCount(sizeByProduct.get(e.productId) ?? 1))!.push(e);
   }
-  const probes = SIZE_BUCKETS.flatMap((b) => shuffle(byBucket.get(b)!).slice(0, args.perBucket));
+  // Seeded shuffle so the stratified sample — and therefore the reported numbers —
+  // is reproducible run to run. Without this, two runs draw different samples and a
+  // before/after comparison is confounded by sampling noise rather than the matcher.
+  const rng = mulberry32(args.seed);
+  const probes = SIZE_BUCKETS.flatMap((b) => shuffle(byBucket.get(b)!, rng).slice(0, args.perBucket));
 
   const outcomes = measureRecall(probes, catalog, brands, sizeByProduct, {
     keepGtin: args.keepGtin,
@@ -158,10 +167,10 @@ function pct(x: number): string {
   return `${(x * 100).toFixed(0)}%`;
 }
 
-function shuffle<T>(a: T[]): T[] {
+function shuffle<T>(a: T[], rng: () => number): T[] {
   const x = [...a];
   for (let i = x.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [x[i], x[j]] = [x[j]!, x[i]!];
   }
   return x;

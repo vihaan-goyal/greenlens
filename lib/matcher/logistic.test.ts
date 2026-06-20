@@ -36,6 +36,7 @@ describe('logistic / featuresToVector — (value, present) encoding', () => {
       0, 1, // brandMatch false, present
       0.5, 1, // ingredientsOverlap
       0, 0, // sizeMatch absent
+      0, 0, // variantConflict absent
     ]);
   });
 

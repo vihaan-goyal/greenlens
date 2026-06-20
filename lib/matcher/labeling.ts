@@ -22,7 +22,7 @@
 
 import type { Brand } from '../domain/types';
 import { blockKeys, canonicalizeBrand, firstNameToken, normalizeGtin } from './blocking';
-import { computeFeatures, type FeatureScores, type MatchableItem } from './features';
+import { computeFeatures, extractVariantTokens, type FeatureScores, type MatchableItem } from './features';
 import { featuresToVector } from './logistic';
 import type { CatalogEntry } from './matcher';
 
@@ -59,6 +59,17 @@ export interface LabelOptions {
    * brand signal — so it can't reject a different brand with the same name.
    */
   crossBrandNegativesPerProduct?: number;
+  /**
+   * Variant-conflict negatives: a product paired with a sighting of itself whose
+   * one variant token (SPF / shade / concentration / AM-PM) has been changed to a
+   * different value — a genuinely different SKU. Everything else (brand, name,
+   * ingredients, size) still matches, so variantMatch=false is the *only* signal
+   * that separates them. Without these the bootstrapped same-block negatives
+   * almost never exercise variantMatch and the model trains its weight to ~0,
+   * leaving head-brand siblings (SPF 60 vs 30, shade 150 vs 350) undistinguished.
+   * Fires only for products whose name carries a mutable variant token.
+   */
+  variantNegativesPerProduct?: number;
   /** Fraction of synthetic sightings that keep their GTIN (the rest drop it). */
   keepGtinFraction?: number;
   rng?: Rng;
@@ -68,6 +79,7 @@ const DEFAULTS: Required<Omit<LabelOptions, 'rng'>> = {
   positivesPerProduct: 2,
   negativesPerProduct: 2,
   crossBrandNegativesPerProduct: 1,
+  variantNegativesPerProduct: 1,
   keepGtinFraction: 0.4,
 };
 
@@ -107,6 +119,58 @@ export function degradedSighting(entry: CatalogEntry, rng: Rng, keepGtin: boolea
   };
   if (keepGtin && entry.gtin) sighting.gtin = entry.gtin;
   return sighting;
+}
+
+/**
+ * Rewrite the first variant token in `name` to a different value, yielding the
+ * name of a genuinely different SKU. Returns null when the name has no mutable
+ * token. Kept deterministic (no rng) so a product's variant negative is stable.
+ */
+export function mutateVariantToken(name: string): string | null {
+  const spf = name.match(/\bspf\s*\d+/i);
+  if (spf) {
+    const v = Number(spf[0].match(/\d+/)![0]);
+    return name.replace(spf[0], spf[0].replace(/\d+/, String(v >= 50 ? 30 : v + 20)));
+  }
+  const pct = name.match(/\d+(?:\.\d+)?\s*%/);
+  if (pct) {
+    const v = Number(pct[0].match(/\d+(?:\.\d+)?/)![0]);
+    return name.replace(pct[0], pct[0].replace(/\d+(?:\.\d+)?/, String(v >= 5 ? 1 : v + 5)));
+  }
+  const ampm = name.match(/\b(am|pm)\b/i);
+  if (ampm) {
+    return name.replace(ampm[0], ampm[1]!.toLowerCase() === 'am' ? 'PM' : 'AM');
+  }
+  const shade = extractVariantTokens(name).get('shade');
+  if (shade) {
+    const re = new RegExp(`\\b${shade}\\b`, 'g');
+    let last = -1;
+    for (const m of name.matchAll(re)) last = m.index!;
+    if (last >= 0) {
+      return name.slice(0, last) + String(Number(shade) + 100) + name.slice(last + shade.length);
+    }
+  }
+  return null;
+}
+
+/**
+ * A degraded sighting of `entry` whose one variant token has been changed to a
+ * different value — a different SKU separable only by variantMatch=false. GTIN is
+ * deliberately dropped: a shared barcode would (correctly) say "same product".
+ */
+export function variantMutatedSighting(entry: CatalogEntry, rng: Rng): MatchableItem | null {
+  const mutated = mutateVariantToken(entry.name);
+  if (!mutated) return null;
+  const tail = pick(MARKETING_TAILS, rng);
+  const name = `${entry.brand ?? ''} ${mutated} ${tail}`.replace(/\s+/g, ' ').trim();
+  return {
+    id: `variant-${entry.productId}`,
+    brand: entry.brand,
+    name,
+    ingredients: entry.ingredients,
+    sizeValue: entry.sizeValue,
+    sizeUnit: entry.sizeUnit,
+  };
 }
 
 /** Distinct catalog entries that share a block key with `entry`, minus itself. */
@@ -168,6 +232,8 @@ export function generateLabeledPairs(
   const negativesPerProduct = opts.negativesPerProduct ?? DEFAULTS.negativesPerProduct;
   const crossBrandNegativesPerProduct =
     opts.crossBrandNegativesPerProduct ?? DEFAULTS.crossBrandNegativesPerProduct;
+  const variantNegativesPerProduct =
+    opts.variantNegativesPerProduct ?? DEFAULTS.variantNegativesPerProduct;
   const keepGtinFraction = opts.keepGtinFraction ?? DEFAULTS.keepGtinFraction;
   const rng = opts.rng ?? Math.random;
 
@@ -211,6 +277,17 @@ export function generateLabeledPairs(
     const siblings = sameBlockOthers(entry, index, brands);
     for (let i = 0; i < negativesPerProduct && siblings.length > 0; i++) {
       pairs.push(negativeFrom(pick(siblings, rng), entry));
+    }
+
+    for (let i = 0; i < variantNegativesPerProduct; i++) {
+      const mutated = variantMutatedSighting(entry, rng);
+      if (!mutated) break; // no mutable variant token — nothing to learn from here
+      pairs.push({
+        a: entry.productId,
+        b: mutated.id,
+        features: computeFeatures(entry, mutated, brands),
+        label: 0,
+      });
     }
 
     if (crossBrandNegativesPerProduct > 0 && flatPool.length > 1) {

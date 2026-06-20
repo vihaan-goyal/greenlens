@@ -46,6 +46,9 @@ export const FEATURE_WEIGHTS: Record<FeatureKey, number> = {
   brandMatch: 2.5,
   ingredientsOverlap: 3.0,
   sizeMatch: 1.0,
+  // Negative: a variant conflict (SPF 60 vs 30, shade 150 vs 350) is evidence
+  // AGAINST a match. Only the learned scorer is live; handScore is reference-only.
+  variantConflict: -4.0,
 };
 
 /** The pre-learning hand scorer. Kept for comparison; not used by the matcher. */
