@@ -1,17 +1,43 @@
 // Pure module — imports nothing from React/Next.
-// Stage 2 of the matcher: scoring. Fellegi-Sunter-style additive log-likelihood
-// over features that survived (i.e., were available on both sides). Weights
-// are hand-picked for the prototype; the seam to swap for a learned logistic
-// regression is `FEATURE_WEIGHTS` — replace the constant with a fitted vector
-// and everything downstream still works.
+// Stage 2 of the matcher: scoring.
 //
-// NORMALIZATION (the important bit): we divide by the sum of |weight| over
-// *available* features, so a missing GTIN drops that 6.0 weight from both
-// numerator and denominator. Otherwise the threshold would shift every time
-// a listing's richness changed. With this, the same threshold is meaningful
-// across pairs whether or not the barcode survived ingestion.
+// The live scorer is now the LEARNED logistic-regression model in model.ts,
+// fitted by `npm run matcher:train` on labeled pairs bootstrapped from the real
+// catalog (see logistic.ts / labeling.ts). `score()` returns its match
+// probability and `MATCH_THRESHOLD` is the threshold tuned at fit time — this is
+// the "swap the hand weights for a learned logistic regression" seam paying off.
+//
+// The original hand-picked Fellegi-Sunter weights are kept below as
+// `FEATURE_WEIGHTS` / `handScore` for reference and for the training script's
+// learned-vs-hand weight comparison. They no longer drive matching, but they
+// document the prior and are a ready fallback.
 
 import type { FeatureKey, FeatureScores } from './features';
+import { predictProba } from './logistic';
+import { MATCHER_MODEL } from './model';
+
+/**
+ * Match probability in 0..1 from the learned model. Missing features stay
+ * neutral via the model's (value, present) encoding — the same intent the hand
+ * scorer's present-only normalization had.
+ */
+export function score(features: FeatureScores): number {
+  return predictProba(MATCHER_MODEL, features);
+}
+
+/**
+ * Pairs at/above this probability are treated as matches. Re-tuned from the hand
+ * scorer's 0.62 to the logistic model's fit-time threshold; the two numbers live
+ * on different scales (normalized weighted-average vs probability) and are not
+ * comparable. See matcher.test.ts for the calibration tests this still satisfies.
+ */
+export const MATCH_THRESHOLD = MATCHER_MODEL.threshold;
+
+// ─── legacy hand scorer (reference / fallback only) ──────────────────────────
+// Fellegi-Sunter-style additive weighted average over features present on both
+// sides, normalized by the sum of |weight| over available features so a missing
+// GTIN drops that signal instead of zeroing the score. Superseded by `score()`
+// above; retained because the training script reports learned weights against it.
 
 export const FEATURE_WEIGHTS: Record<FeatureKey, number> = {
   gtinExact: 6.0,
@@ -22,18 +48,8 @@ export const FEATURE_WEIGHTS: Record<FeatureKey, number> = {
   sizeMatch: 1.0,
 };
 
-/**
- * Pairs above this are treated as matches. Pinned so brand+name+ingredient
- * agreement (no GTIN, no size) clears comfortably while brand-only agreement
- * does not. See matcher.test.ts for the calibration tests.
- */
-export const MATCH_THRESHOLD = 0.62;
-
-/**
- * Confidence in roughly 0..1. Binary features contribute their full weight on
- * a match and 0 on a non-match; similarity features contribute weight × value.
- */
-export function score(features: FeatureScores): number {
+/** The pre-learning hand scorer. Kept for comparison; not used by the matcher. */
+export function handScore(features: FeatureScores): number {
   let weighted = 0;
   let total = 0;
   for (const key of Object.keys(FEATURE_WEIGHTS) as FeatureKey[]) {
