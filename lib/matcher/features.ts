@@ -93,6 +93,59 @@ export function normalizeIngredient(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
+// ─── corpus-generic name detection ────────────────────────────────────────────
+// The companion to the empty-name filter in prisma-repository: an ultra-generic
+// short name ("Shampoo", "Hand Soap") is a token-subset of thousands of products,
+// so the overlap coefficient scores it ~1.0 against every one of them and it
+// becomes a universal false near-tie — the dominant cause of head-brand
+// resolution ambiguity (see recall.ts). We detect these from the catalog itself
+// (no language-specific word list) and drop them at load time, exactly as the
+// no-name rows are dropped, and for the same reason.
+
+export interface GenericNameOptions {
+  /** A token is "generic" when it appears in ≥ this fraction of catalog names. */
+  genericDf?: number;
+  /** Only names with at most this many tokens are eligible to be dropped — a
+   * longer all-generic name ("Daily Moisturizing Lotion") has a specific-enough
+   * token *combination* to identify a product, so it is kept. */
+  maxTokens?: number;
+}
+
+const DEFAULT_GENERIC: Required<GenericNameOptions> = { genericDf: 0.004, maxTokens: 2 };
+
+/** Count, per normalized token, how many of `names` contain it (≤1 per name). */
+export function tokenDocFrequencies(names: ReadonlyArray<string>): Map<string, number> {
+  const df = new Map<string, number>();
+  for (const name of names) {
+    const norm = normalizeName(name);
+    if (!norm) continue;
+    for (const t of new Set(norm.split(' '))) df.set(t, (df.get(t) ?? 0) + 1);
+  }
+  return df;
+}
+
+/**
+ * True when `name` carries no identifying signal beyond corpus-generic category
+ * words: it is short (≤ maxTokens) and every one of its tokens appears in
+ * ≥ genericDf of the corpus. A name with a distinctive (rare) token, or with more
+ * tokens, is kept. `total` is the size of the corpus `df` was built over.
+ */
+export function isGenericName(
+  name: string,
+  df: ReadonlyMap<string, number>,
+  total: number,
+  opts: GenericNameOptions = {},
+): boolean {
+  const genericDf = opts.genericDf ?? DEFAULT_GENERIC.genericDf;
+  const maxTokens = opts.maxTokens ?? DEFAULT_GENERIC.maxTokens;
+  if (total <= 0) return false;
+  const norm = normalizeName(name);
+  if (!norm) return false; // empty names are handled by their own filter
+  const tokens = norm.split(' ');
+  if (tokens.length > maxTokens) return false;
+  return tokens.every((t) => (df.get(t) ?? 0) / total >= genericDf);
+}
+
 // ─── feature computation ────────────────────────────────────────────────────
 
 import type { Brand } from '../domain/types';

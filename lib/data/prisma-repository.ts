@@ -14,7 +14,7 @@ import {
 } from '../domain/types';
 import { summarizePillars } from '../domain/scoring';
 import { canonicalizeBrand } from '../matcher/blocking';
-import { normalizeName } from '../matcher/features';
+import { normalizeName, tokenDocFrequencies, isGenericName } from '../matcher/features';
 import type { CatalogEntry } from '../matcher/matcher';
 import type { IngestResult } from '../ingestion/open-beauty-facts';
 import { prisma } from './prisma';
@@ -225,7 +225,7 @@ export class PrismaProductRepository implements ProductRepository {
     ]);
     const brands = brandRows.map(toBrand);
     const nameById = new Map(brands.map((b) => [b.id, b.name] as const));
-    const catalog: CatalogEntry[] = productRows
+    const named: CatalogEntry[] = productRows
       .map((row) => {
         const p = toProduct(row as ProductRow);
         return {
@@ -248,6 +248,15 @@ export class PrismaProductRepository implements ProductRepository {
       // GTIN for one of these no-name rows won't resolve, which is acceptable —
       // we'd have nothing to show for it anyway.
       .filter((c) => normalizeName(c.name) !== '');
+
+    // Same pathology, one level up: drop rows whose whole name is corpus-generic
+    // category words ("Shampoo", "Hand Soap"). Such a row is a token-subset of
+    // thousands of products, so the overlap coefficient scores it ~1.0 against
+    // each one and it becomes a universal false near-tie — the dominant remaining
+    // cause of head-brand resolution ambiguity. Genericness is measured from this
+    // catalog (no language-specific list), so it adapts to whatever the corpus is.
+    const df = tokenDocFrequencies(named.map((c) => c.name));
+    const catalog = named.filter((c) => !isGenericName(c.name, df, named.length));
     return { catalog, brands };
   }
 
