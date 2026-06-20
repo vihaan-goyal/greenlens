@@ -61,8 +61,9 @@ export interface FeatureScores {
   /**
    * Variant-token CONFLICT: true when both names expose the same kind of variant
    * marker but the values disagree — "...SPF 60" vs "...SPF 30", shade "...150"
-   * vs "...350", "2%" vs "5%", "AM" vs "PM". These are head-brand siblings: they
-   * share almost every token but the one that decides which physical product
+   * vs "...350", "2%" vs "5%", "AM" vs "PM", scent "Lavender" vs "Eucalyptus",
+   * color "Nude" vs "Coral", "3 Pack" vs "6 Pack". These are head-brand siblings:
+   * they share almost every token but the one that decides which physical product
    * (and which safety data) you're looking at.
    *
    * The name features can't carry this — nameTokenSet is a containment coefficient
@@ -151,9 +152,16 @@ export function computeFeatures(
 
 // ─── variant tokens ───────────────────────────────────────────────────────────
 // Markers that distinguish near-identical SKUs of the same brand. Each kind is a
-// real sibling case in eval-pairs.ts. Deliberately NOT included: size/quantity
-// (owned by sizeMatch) and "refill"/pack tokens (same product, different pack
-// — see eval e6), which must never read as a variant conflict.
+// real sibling case (see eval-pairs.ts for the numeric ones). Deliberately NOT
+// included: size/quantity (owned by sizeMatch). Note "pack" is a pack-COUNT
+// (3-pack vs 6-pack — distinct retail SKUs), NOT a "Refill" repackage; the count
+// regex below never matches the bare word "Refill" (eval e6 stays a match).
+//
+// Numeric/single-valued kinds (spf, pct, ampm, shade, pack) conflict when their
+// one value disagrees. Open-vocabulary kinds (scent, color) are stored as a
+// `|`-joined sorted word SET and conflict only when both sets are non-empty and
+// DISJOINT — so "Coconut & Vanilla" vs "Vanilla" (overlap) is not a conflict,
+// guarding against a truncated sighting splitting from its own product.
 
 /**
  * Parse variant markers off a raw product name into a `kind → value` map.
@@ -178,8 +186,65 @@ export function extractVariantTokens(name: string): Map<string, string> {
   const shade = shadeNumber(s);
   if (shade) tokens.set('shade', shade);
 
+  const pack = packCount(s);
+  if (pack) tokens.set('pack', pack);
+
+  const words = s.match(/[a-z]+/g) ?? [];
+  const scent = matchVocab(words, SCENT_WORDS);
+  if (scent) tokens.set('scent', scent);
+  const color = matchVocab(words, COLOR_WORDS);
+  if (color) tokens.set('color', color);
+
   return tokens;
 }
+
+/** Kinds whose value is a `|`-joined word set, compared by set-disjointness. */
+const SET_KINDS: ReadonlySet<string> = new Set(['scent', 'color']);
+
+/**
+ * A retail pack-count ("3 Pack", "2-Count", "6ct", "Pack of 2"). The bare word
+ * "Refill" is intentionally not a count, so a refill repackage (eval e6) is never
+ * read as a pack conflict.
+ */
+function packCount(s: string): string | null {
+  const m =
+    s.match(/\b(\d+)\s*[- ]?(?:packs?|count|ct)\b/) ?? s.match(/\bpack of\s*(\d+)\b/);
+  return m ? m[1]! : null;
+}
+
+/** Sorted, `|`-joined set of `vocab` words present in `words`, or null if none. */
+function matchVocab(words: ReadonlyArray<string>, vocab: ReadonlySet<string>): string | null {
+  const found = new Set<string>();
+  for (const w of words) if (vocab.has(w)) found.add(w);
+  return found.size === 0 ? null : [...found].sort().join('|');
+}
+
+// Concrete fragrance/flavor nouns. Curated allowlist (recall-limited on purpose,
+// like blocking's STOPWORDS): a known word is a reliable signal; an unlisted one
+// is just neutral. Generic scent-family words ("fresh", "floral") are excluded —
+// too polysemous to discriminate.
+const SCENT_WORDS: ReadonlySet<string> = new Set([
+  'lavender', 'vanilla', 'rose', 'jasmine', 'citrus', 'lemon', 'lime', 'orange',
+  'grapefruit', 'bergamot', 'mint', 'peppermint', 'spearmint', 'menthol',
+  'eucalyptus', 'coconut', 'almond', 'cucumber', 'chamomile', 'sandalwood',
+  'cedarwood', 'patchouli', 'neroli', 'gardenia', 'magnolia', 'peony', 'lilac',
+  'berry', 'strawberry', 'raspberry', 'blackberry', 'blueberry', 'cherry',
+  'peach', 'apricot', 'mango', 'pineapple', 'papaya', 'watermelon', 'pomegranate',
+  'lychee', 'melon', 'fig', 'plum', 'pear', 'apple', 'grape', 'ginger',
+  'cinnamon', 'clove', 'nutmeg', 'pumpkin', 'caramel', 'chocolate', 'mocha',
+  'espresso', 'hazelnut', 'vetiver', 'musk', 'amber',
+]);
+
+// Concrete makeup shade/color nouns. Generic intensity words ("light", "medium",
+// "deep", "dark", "fair") are excluded: they double as texture/coverage/skincare
+// descriptors ("deep hydration", "light lotion") and would mis-fire as colors.
+const COLOR_WORDS: ReadonlySet<string> = new Set([
+  'nude', 'beige', 'ivory', 'porcelain', 'sand', 'fawn', 'chestnut', 'praline',
+  'toffee', 'mahogany', 'taupe', 'mauve', 'bronze', 'copper', 'coral', 'crimson',
+  'scarlet', 'ruby', 'burgundy', 'blush', 'ebony', 'bisque', 'buff', 'honey',
+  'caramel', 'golden', 'gold', 'silver', 'pink', 'plum', 'berry', 'wine', 'cocoa',
+  'espresso', 'mocha', 'almond',
+]);
 
 /**
  * A makeup shade number. Prefers an explicit "shade N"; otherwise, only in a
@@ -201,7 +266,8 @@ function shadeNumber(s: string): string | null {
 
 /**
  * True when the two names share a variant kind whose values disagree (different
- * SKU). A shared-and-agreeing kind, or no shared kind, is not a conflict.
+ * SKU). A shared-and-agreeing kind, or no shared kind, is not a conflict. Set
+ * kinds (scent/color) conflict on disjoint sets; single kinds on unequal values.
  */
 export function variantTokensConflict(nameA: string, nameB: string): boolean {
   const a = extractVariantTokens(nameA);
@@ -209,7 +275,10 @@ export function variantTokensConflict(nameA: string, nameB: string): boolean {
   for (const [kind, valA] of a) {
     const valB = b.get(kind);
     if (valB === undefined) continue;
-    if (!variantValuesEqual(kind, valA, valB)) return true;
+    const conflict = SET_KINDS.has(kind)
+      ? setsDisjoint(valA, valB)
+      : !variantValuesEqual(kind, valA, valB);
+    if (conflict) return true;
   }
   return false;
 }
@@ -218,6 +287,63 @@ function variantValuesEqual(kind: string, a: string, b: string): boolean {
   if (kind === 'ampm') return a === b;
   // Numeric kinds: compare by value so "030" === "30" and "2" === "2.0".
   return Number(a) === Number(b);
+}
+
+/** Two `|`-joined word sets share no member. */
+function setsDisjoint(a: string, b: string): boolean {
+  const bs = new Set(b.split('|'));
+  for (const x of a.split('|')) if (bs.has(x)) return false;
+  return true;
+}
+
+/**
+ * Rewrite the first variant token in `name` to a different value, yielding the
+ * name of a genuinely different SKU. Used to mint hard training negatives — the
+ * mutated name matches on everything except variantConflict. Returns null when
+ * the name carries no mutable token. Deterministic (no rng) so a product's
+ * variant negative is stable.
+ */
+export function mutateVariantToken(name: string): string | null {
+  const spf = name.match(/\bspf\s*\d+/i);
+  if (spf) {
+    const v = Number(spf[0].match(/\d+/)![0]);
+    return name.replace(spf[0], spf[0].replace(/\d+/, String(v >= 50 ? 30 : v + 20)));
+  }
+  const pct = name.match(/\d+(?:\.\d+)?\s*%/);
+  if (pct) {
+    const v = Number(pct[0].match(/\d+(?:\.\d+)?/)![0]);
+    return name.replace(pct[0], pct[0].replace(/\d+(?:\.\d+)?/, String(v >= 5 ? 1 : v + 5)));
+  }
+  const ampm = name.match(/\b(am|pm)\b/i);
+  if (ampm) {
+    return name.replace(ampm[0], ampm[1]!.toLowerCase() === 'am' ? 'PM' : 'AM');
+  }
+  const shade = shadeNumber(name.toLowerCase());
+  if (shade) {
+    const re = new RegExp(`\\b${shade}\\b`, 'g');
+    let last = -1;
+    for (const m of name.matchAll(re)) last = m.index!;
+    if (last >= 0) {
+      return name.slice(0, last) + String(Number(shade) + 100) + name.slice(last + shade.length);
+    }
+  }
+  const pack = name.match(/\b(\d+)(\s*[- ]?(?:packs?|count|ct))\b/i);
+  if (pack) {
+    const v = Number(pack[1]);
+    return name.replace(pack[0], `${v >= 2 ? 1 : v + 1}${pack[2]}`);
+  }
+  return mutateDescriptor(name, SCENT_WORDS) ?? mutateDescriptor(name, COLOR_WORDS);
+}
+
+/** Swap the first `vocab` word in `name` for a different one not already present. */
+function mutateDescriptor(name: string, vocab: ReadonlySet<string>): string | null {
+  const words = name.toLowerCase().match(/[a-z]+/g) ?? [];
+  const present = new Set(words.filter((w) => vocab.has(w)));
+  if (present.size === 0) return null;
+  const replacement = [...vocab].find((w) => !present.has(w));
+  if (!replacement) return null;
+  const target = [...present][0]!;
+  return name.replace(new RegExp(`\\b${target}\\b`, 'i'), replacement);
 }
 
 function sizesEqual(va: number, ua: string, vb: number, ub: string): boolean {

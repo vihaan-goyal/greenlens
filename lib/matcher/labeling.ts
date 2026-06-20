@@ -22,7 +22,7 @@
 
 import type { Brand } from '../domain/types';
 import { blockKeys, canonicalizeBrand, firstNameToken, normalizeGtin } from './blocking';
-import { computeFeatures, extractVariantTokens, type FeatureScores, type MatchableItem } from './features';
+import { computeFeatures, mutateVariantToken, type FeatureScores, type MatchableItem } from './features';
 import { featuresToVector } from './logistic';
 import type { CatalogEntry } from './matcher';
 
@@ -122,41 +122,9 @@ export function degradedSighting(entry: CatalogEntry, rng: Rng, keepGtin: boolea
 }
 
 /**
- * Rewrite the first variant token in `name` to a different value, yielding the
- * name of a genuinely different SKU. Returns null when the name has no mutable
- * token. Kept deterministic (no rng) so a product's variant negative is stable.
- */
-export function mutateVariantToken(name: string): string | null {
-  const spf = name.match(/\bspf\s*\d+/i);
-  if (spf) {
-    const v = Number(spf[0].match(/\d+/)![0]);
-    return name.replace(spf[0], spf[0].replace(/\d+/, String(v >= 50 ? 30 : v + 20)));
-  }
-  const pct = name.match(/\d+(?:\.\d+)?\s*%/);
-  if (pct) {
-    const v = Number(pct[0].match(/\d+(?:\.\d+)?/)![0]);
-    return name.replace(pct[0], pct[0].replace(/\d+(?:\.\d+)?/, String(v >= 5 ? 1 : v + 5)));
-  }
-  const ampm = name.match(/\b(am|pm)\b/i);
-  if (ampm) {
-    return name.replace(ampm[0], ampm[1]!.toLowerCase() === 'am' ? 'PM' : 'AM');
-  }
-  const shade = extractVariantTokens(name).get('shade');
-  if (shade) {
-    const re = new RegExp(`\\b${shade}\\b`, 'g');
-    let last = -1;
-    for (const m of name.matchAll(re)) last = m.index!;
-    if (last >= 0) {
-      return name.slice(0, last) + String(Number(shade) + 100) + name.slice(last + shade.length);
-    }
-  }
-  return null;
-}
-
-/**
  * A degraded sighting of `entry` whose one variant token has been changed to a
- * different value — a different SKU separable only by variantMatch=false. GTIN is
- * deliberately dropped: a shared barcode would (correctly) say "same product".
+ * different value — a different SKU separable only by variantConflict=true. GTIN
+ * is deliberately dropped: a shared barcode would (correctly) say "same product".
  */
 export function variantMutatedSighting(entry: CatalogEntry, rng: Rng): MatchableItem | null {
   const mutated = mutateVariantToken(entry.name);
