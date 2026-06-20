@@ -13,6 +13,15 @@ interface Props {
 }
 
 /**
+ * Quantize a computed SVG coordinate to 0.01px. Math.cos/Math.sin may differ by
+ * ~1 ULP between the Node (server) and browser (client) V8 builds, which trips
+ * React hydration on the tick endpoints; rounding well below pixel precision
+ * makes both sides serialize the same string. Plain arithmetic is IEEE-stable,
+ * so only the trig-derived coordinates need this.
+ */
+const px = (n: number): number => Math.round(n * 100) / 100;
+
+/**
  * Hero composite dial. Pure SVG, no chart lib (per CLAUDE.md).
  *
  * Visual layers (back→front):
@@ -137,10 +146,10 @@ export function ScoreRing({ pillars, size = 260, thickness = 14 }: Props) {
             const a = (angleDeg * Math.PI) / 180;
             const inner = r - thickness / 2 - 6;
             const outer = r - thickness / 2 - 2;
-            const x1 = cx + Math.cos(a) * inner;
-            const y1 = cy + Math.sin(a) * inner;
-            const x2 = cx + Math.cos(a) * outer;
-            const y2 = cy + Math.sin(a) * outer;
+            const x1 = px(cx + Math.cos(a) * inner);
+            const y1 = px(cy + Math.sin(a) * inner);
+            const x2 = px(cx + Math.cos(a) * outer);
+            const y2 = px(cy + Math.sin(a) * outer);
             const accent = i === 0 || i === 5 || i === 10;
             return (
               <line
