@@ -123,6 +123,17 @@
     0%, 100% { opacity: 0.35; }
     50% { opacity: 0.7; }
   }
+  /* Sonion nods a couple of times while he's speaking. */
+  @keyframes nod {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(1.5px) rotate(-1.5deg); }
+    75% { transform: translateY(-1.5px) rotate(1.5deg); }
+  }
+  /* His mouth opens and closes while talking. */
+  @keyframes talk {
+    0%, 100% { transform: scaleY(0.35); }
+    50% { transform: scaleY(1); }
+  }
   .anim-rise {
     animation: rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
   }
@@ -134,6 +145,12 @@
   }
   .anim-shimmer {
     animation: shimmer 4s ease-in-out infinite;
+  }
+  .anim-nod {
+    animation: nod 600ms ease-in-out 2;
+  }
+  .anim-talk {
+    animation: talk 220ms ease-in-out infinite;
   }
 
   /* Highlighter marks — painted background gradient that fills the lower

@@ -11,6 +11,12 @@ interface Props {
   style?: CSSProperties;
   /** Idle bob animation. */
   idle?: boolean;
+  /**
+   * When true, Sonion nods and his mouth moves — a second readout that he's
+   * commenting. Callers gate this on prefers-reduced-motion so reduced-motion
+   * users still get the copy without the animation.
+   */
+  speaking?: boolean;
 }
 
 /**
@@ -24,14 +30,17 @@ export function Sonion({
   size = 132,
   halo = false,
   idle = true,
+  speaking = false,
   className,
   style,
 }: Props) {
   const m = MOOD[mood];
+  // While speaking he nods (a quick bob) instead of the slow idle drift.
+  const motion = speaking ? 'anim-nod' : idle ? 'anim-drift' : '';
 
   return (
     <div
-      className={`relative inline-block ${idle ? 'anim-drift' : ''} ${className ?? ''}`}
+      className={`relative inline-block ${motion} ${className ?? ''}`}
       style={{ width: size, height: size, ...style }}
       aria-hidden
     >
@@ -52,7 +61,7 @@ export function Sonion({
         height={size}
         className="relative"
         role="img"
-        aria-label={`Sonion looks ${mood}`}
+        aria-label={`Sonion looks ${mood}${speaking ? ', speaking' : ''}`}
       >
         <defs>
           <radialGradient id="son-body" cx="38%" cy="32%" r="78%">
@@ -166,14 +175,29 @@ export function Sonion({
           </>
         )}
 
-        {/* Mouth */}
-        <path
-          d={m.mouth}
-          stroke="#2A241B"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          fill="none"
-        />
+        {/* Mouth — a moving "talk" mouth while speaking, otherwise the mood
+            mouth. The talk ellipse opens and closes via the anim-talk
+            keyframe; reduced-motion users never see it because callers don't
+            pass speaking under reduced motion. */}
+        {speaking ? (
+          <ellipse
+            className="anim-talk"
+            cx="66"
+            cy="90"
+            rx="6.5"
+            ry="4"
+            fill="#2A241B"
+            style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
+          />
+        ) : (
+          <path
+            d={m.mouth}
+            stroke="#2A241B"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            fill="none"
+          />
+        )}
       </svg>
     </div>
   );
