@@ -113,21 +113,27 @@ export function SonionReactive({ pillars, size = 96, halo = false }: Props) {
 
   return (
     <div className="flex flex-col items-end gap-2">
-      {open && line && (
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label={`Sonion says: ${line}. Tap to dismiss.`}
-          className="anim-rise max-w-[15rem] rounded-2xl rounded-br-md px-3.5 py-2.5 text-left text-[12.5px] font-medium leading-snug shadow-card"
-          style={{
-            background: 'var(--card)',
-            color: 'var(--ink)',
-            border: '1px solid var(--line-soft)',
-          }}
-        >
-          {line}
-        </button>
-      )}
+      {/* Persistent polite live region so screen-reader users hear each new
+          comment when the weights change — not just sighted users. The button's
+          text is its accessible name (a single trailing period); the dismiss
+          affordance is conveyed by its button role plus the title tooltip. */}
+      <div role="status" aria-live="polite" className="flex justify-end">
+        {open && line && (
+          <button
+            type="button"
+            onClick={dismiss}
+            title="Tap to dismiss"
+            className="anim-rise max-w-[15rem] rounded-2xl rounded-br-md px-3.5 py-2.5 text-left text-[12.5px] font-medium leading-snug shadow-card"
+            style={{
+              background: 'var(--card)',
+              color: 'var(--ink)',
+              border: '1px solid var(--line-soft)',
+            }}
+          >
+            {line}
+          </button>
+        )}
+      </div>
       <Sonion mood={mood} size={size} halo={halo} speaking={speaking} />
     </div>
   );
