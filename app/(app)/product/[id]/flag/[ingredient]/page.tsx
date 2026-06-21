@@ -34,31 +34,41 @@ export default async function FlagPage({ params }: PageProps) {
   if (!flag) notFound();
 
   return (
-    <main className="mx-auto w-full max-w-xl px-5 pt-4 pb-10 md:px-6 md:pt-8">
-      <nav className="mb-6 text-xs text-ink-3">
-        <Link href={`/product/${id}`} className="hover:text-ink">
-          ← {base.product.displayName}
-        </Link>
+    <main className="mx-auto w-full max-w-4xl px-5 pt-5 pb-4 md:px-8 md:pt-7">
+      <nav className="mb-4 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+        <Link href="/browse" className="hover:text-ink">Catalog</Link>
+        <span aria-hidden>/</span>
+        <Link href={`/product/${id}`} className="truncate hover:text-ink">{base.product.displayName}</Link>
+        <span aria-hidden>/</span>
+        <span className="text-ink">Flag</span>
       </nav>
 
-      <header className="mb-5">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-ink-3">Flagged ingredient</p>
-        <h1 className="mt-1 text-[22px] font-semibold leading-tight text-ink">{flag.name}</h1>
+      <header
+        className="relative mb-6 overflow-hidden rounded-card halo-tr anim-rise"
+        style={{ background: 'var(--card)', border: '1px solid var(--line)', ['--halo' as string]: 'var(--halo-clay)' }}
+      >
+        <div className="halo-content p-5 md:p-6">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--verdict-poor)' }}>
+            Flagged ingredient
+          </p>
+          <h1 className="mt-1 font-display text-[28px] font-semibold leading-tight text-ink md:text-[34px]">{flag.name}</h1>
+          <p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-ink">{flag.explanation}</p>
+        </div>
       </header>
 
-      <section className="mb-8 rounded-card bg-card p-5 ring-1 ring-line">
-        <p className="text-sm leading-relaxed text-ink">{flag.explanation}</p>
-      </section>
-
       <section className="mb-8">
-        <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-ink-3">
+        <h2 className="mb-3 flex items-baseline justify-between border-b pb-2 font-display text-[18px] font-semibold text-ink" style={{ borderColor: 'var(--line)' }}>
           Where each rater lands
+          <span className="text-[9.5px] font-semibold uppercase tracking-[0.22em]" style={{ color: 'var(--accent-deep)' }}>
+            funding shown
+          </span>
         </h2>
-        <ul className="space-y-3">
+        <ul className="grid gap-3 md:grid-cols-2">
           {flag.positions.map((pos) => (
             <li
               key={pos.sourceId}
-              className="rounded-card bg-card p-4 ring-1 ring-line"
+              className="rounded-card bg-card p-4"
+              style={{ border: '1px solid var(--line)' }}
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
@@ -92,14 +102,15 @@ export default async function FlagPage({ params }: PageProps) {
 
       {flag.notes.length > 0 && (
         <section>
-          <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-ink-3">
+          <h2 className="mb-3 border-b pb-2 font-display text-[18px] font-semibold text-ink" style={{ borderColor: 'var(--line)' }}>
             Other notes
           </h2>
           <ul className="flex flex-wrap gap-2">
             {flag.notes.map((n) => (
               <li
                 key={n.label}
-                className="flex items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs text-ink ring-1 ring-line"
+                className="flex items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs text-ink"
+                style={{ border: '1px solid var(--line)' }}
               >
                 <span
                   className="h-2 w-2 rounded-full"

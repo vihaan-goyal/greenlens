@@ -23,173 +23,122 @@ export default async function HomePage({ searchParams }: HomeProps) {
   const catalog = query ? null : await buildShelfCatalog();
 
   return (
-    <main className="relative pb-16">
+    <main className="relative pb-4">
       <div className="mx-auto w-full max-w-6xl px-5 md:px-8">
       {/* ─── HERO ───────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-4 pb-7 md:pt-10 md:pb-10">
-        {/* Atmospheric corner washes */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -right-20 -top-16 h-72 w-72 rounded-full anim-shimmer"
-          style={{
-            background:
-              'radial-gradient(closest-side, var(--halo-leaf), transparent 70%)',
-            filter: 'blur(2px)',
-          }}
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -left-24 top-40 h-60 w-60 rounded-full"
-          style={{
-            background:
-              'radial-gradient(closest-side, var(--halo-amber), transparent 70%)',
-            filter: 'blur(2px)',
-            opacity: 0.7,
-          }}
-        />
-
-        <div className="relative max-w-2xl">
-        {/* eyebrow w/ tiny sprout glyph */}
-        <p className="relative flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.32em] text-ink-2 anim-rise">
-          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
-            <path
-              d="M6 11 V 5 M 6 6 C 3 6 2 4 2 2 C 4 2 6 3 6 5 M 6 6 C 9 6 10 4 10 2 C 8 2 6 3 6 5"
-              stroke="var(--accent-deep)"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-          </svg>
-          greenlens · vol. 01
-        </p>
-
-        {/* Editorial display title */}
-        <h1
-          className="relative mt-3 font-display text-[46px] font-semibold leading-[0.92] text-ink anim-rise md:text-[60px]"
-          style={{ animationDelay: '60ms' }}
-        >
-          The <span className="mark-leaf font-bold">second</span>
-          <br />
-          <span className="italic u-bold" style={{ color: 'var(--accent-deep)' }}>
-            opinion
-          </span>{' '}
-          on every
-          <br />
-          shelf.
-        </h1>
-
-        {/* Sonion + thesis row */}
-        <div
-          className="relative mt-5 flex items-end gap-3 anim-rise"
-          style={{ animationDelay: '140ms' }}
-        >
-          <Sonion mood="happy" size={108} halo />
-          <div className="pb-2">
-            <p className="text-[13px] leading-snug text-ink md:text-[15px]">
-              I pull every public rater into one view —{' '}
-              <span className="font-display italic font-bold mark-amber" style={{ color: 'var(--ink)' }}>
-                and never hide
-              </span>{' '}
-              where they disagree.
+      <section className="relative overflow-hidden rounded-card halo-tr anim-rise mt-6"
+        style={{
+          background: 'var(--card)',
+          border: '1px solid var(--line)',
+          ['--halo' as string]: 'var(--halo-leaf)',
+        }}
+      >
+        <div className="halo-content grid gap-5 p-5 md:grid-cols-[1.5fr_1fr] md:items-center md:p-7">
+          {/* Left: the pitch */}
+          <div className="relative">
+            <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-ink-3">
+              <span className="h-px w-6" style={{ background: 'var(--accent-deep)' }} />
+              the catalog
             </p>
-            <p className="mt-1 text-[11px] text-ink-3">— Sonion, your guide</p>
-          </div>
-        </div>
+            <h1 className="mt-2.5 font-display text-[34px] font-semibold leading-[0.98] text-ink md:text-[44px]">
+              The <span className="mark-leaf font-bold">second</span>{' '}
+              <span className="italic u-bold" style={{ color: 'var(--accent-deep)' }}>opinion</span>{' '}
+              on every shelf.
+            </h1>
+            <p className="mt-3 max-w-md text-[13.5px] leading-relaxed text-ink-2">
+              Search a brand, product, or barcode. Greenlens pulls every public
+              rater into one view —{' '}
+              <span className="font-semibold text-ink">and never hides</span> where
+              they disagree.
+            </p>
 
-        {/* Search bar — stylized */}
-        <form
-          method="get"
-          action="/browse"
-          className="relative mt-7 max-w-xl anim-rise"
-          style={{ animationDelay: '220ms' }}
-        >
-          <div
-            className="flex items-center gap-2 rounded-pill bg-card pl-4 pr-2 py-2 shadow-card"
-            style={{ border: '1px solid var(--line)' }}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
-              <circle cx="7" cy="7" r="4.5" stroke="var(--ink-2)" strokeWidth="1.6" fill="none" />
-              <path d="M10.5 10.5 L 14 14" stroke="var(--ink-2)" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-            <input
-              id="q"
-              name="q"
-              type="text"
-              defaultValue={query}
-              placeholder="Search a brand, product, or barcode"
-              className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-3"
-              aria-label="Search products"
-            />
-            <button
-              type="submit"
-              className="rounded-pill bg-espresso px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-card"
-            >
-              Look up
-            </button>
-          </div>
-
-          {/* Or: simulated scan */}
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <button
-              type="button"
-              disabled
-              className="group inline-flex items-center gap-2 rounded-pill px-3 py-1.5 text-[11px] font-medium text-ink-2"
-              style={{
-                background: 'var(--card-2)',
-                border: '1px dashed var(--line)',
-              }}
-              aria-label="Scan a barcode (simulated, coming soon)"
-            >
-              <BarcodeGlyph />
-              Scan a barcode
-              <span className="text-[10px] uppercase tracking-wider text-ink-3">soon</span>
-            </button>
-            {query && (
-              <Link
-                href="/browse"
-                className="rounded-pill bg-card px-3 py-1.5 text-[11px] font-medium text-ink-2"
+            {/* Search bar */}
+            <form method="get" action="/browse" className="mt-4 max-w-md">
+              <div
+                className="flex items-center gap-2 rounded-pill bg-card pl-4 pr-2 py-2 shadow-card"
                 style={{ border: '1px solid var(--line)' }}
               >
-                Clear
-              </Link>
-            )}
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+                  <circle cx="7" cy="7" r="4.5" stroke="var(--ink-2)" strokeWidth="1.6" fill="none" />
+                  <path d="M10.5 10.5 L 14 14" stroke="var(--ink-2)" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+                <input
+                  id="q"
+                  name="q"
+                  type="text"
+                  defaultValue={query}
+                  placeholder="Search a brand, product, or barcode"
+                  className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-3"
+                  aria-label="Search products"
+                />
+                <button
+                  type="submit"
+                  className="rounded-pill bg-espresso px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-card"
+                >
+                  Look up
+                </button>
+              </div>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled
+                  className="group inline-flex items-center gap-2 rounded-pill px-3 py-1.5 text-[11px] font-medium text-ink-2"
+                  style={{ background: 'var(--card-2)', border: '1px dashed var(--line)' }}
+                  aria-label="Scan a barcode (simulated, coming soon)"
+                >
+                  <BarcodeGlyph />
+                  Scan a barcode
+                  <span className="text-[10px] uppercase tracking-wider text-ink-3">soon</span>
+                </button>
+                {query && (
+                  <Link
+                    href="/browse"
+                    className="rounded-pill bg-card px-3 py-1.5 text-[11px] font-medium text-ink-2"
+                    style={{ border: '1px solid var(--line)' }}
+                  >
+                    Clear
+                  </Link>
+                )}
+              </div>
+            </form>
           </div>
-        </form>
-        </div>
-      </section>
 
-      {/* ─── LEGEND CHIPS ───────────────────────────────────────────────── */}
-      <section className="pb-5">
-        <p className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.20em] text-ink-3">
-          <span className="h-px flex-1" style={{ background: 'var(--line)' }} />
-          The verdict scale
-          <span className="h-px flex-1" style={{ background: 'var(--line)' }} />
-        </p>
-        <div className="flex items-stretch gap-1.5">
-          {(['bad', 'poor', 'fair', 'good', 'excellent'] as const).map((band, i) => (
-            <div
-              key={band}
-              className="flex-1 rounded-pill px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-[0.10em] shadow-card md:py-2.5 md:text-[11px]"
-              style={{
-                background: VERDICT_VAR[band],
-                color: 'var(--card)',
-              }}
-            >
-              <span className="opacity-60 tabular">0{i + 1}</span>{' '}
-              <span>{band}</span>
+          {/* Right: Sonion greeting + the verdict scale legend */}
+          <div className="relative flex flex-col gap-3 rounded-2xl p-4" style={{ background: 'var(--card-2)', border: '1px solid var(--line-soft)' }}>
+            <div className="flex items-center gap-3">
+              <Sonion mood="happy" size={72} halo />
+              <p className="text-[12px] leading-snug text-ink-2">
+                <span className="font-display italic font-semibold text-ink">Sonion</span>, your guide —
+                I read the verdict so the spread is never a mystery.
+              </p>
             </div>
-          ))}
+            <div>
+              <p className="mb-1.5 text-[9.5px] font-bold uppercase tracking-[0.2em] text-ink-3">
+                The verdict scale
+              </p>
+              <div className="flex items-stretch gap-1">
+                {(['bad', 'poor', 'fair', 'good', 'excellent'] as const).map((band, i) => (
+                  <div
+                    key={band}
+                    className="flex-1 rounded-pill px-1.5 py-1.5 text-center text-[9px] font-bold uppercase tracking-[0.06em]"
+                    style={{ background: VERDICT_VAR[band], color: 'var(--card)' }}
+                  >
+                    <span className="opacity-60 tabular">{i + 1}</span> {band}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ─── FEED: search results, or your shelf ────────────────────────── */}
-      <section>
+      <section className="mt-8">
         {!query && catalog ? (
           <YourShelf catalog={catalog} />
         ) : (
           <>
-        <div className="mb-3 flex items-baseline justify-between">
+        <div className="mb-3 flex items-baseline justify-between border-b pb-2" style={{ borderColor: 'var(--line)' }}>
           <h2 className="font-display text-[22px] font-semibold leading-none text-ink md:text-[26px]">
             Results <span className="italic text-ink-2">for</span>{' '}
             <span style={{ color: 'var(--accent-deep)' }}>“{query}”</span>
@@ -291,30 +240,6 @@ export default async function HomePage({ searchParams }: HomeProps) {
         )}
           </>
         )}
-      </section>
-
-      {/* ─── THESIS FOOTER ─────────────────────────────────────────────── */}
-      <section className="pt-10">
-        <div
-          className="relative overflow-hidden rounded-card px-5 py-5 halo-tl md:px-8 md:py-7"
-          style={{
-            background: 'var(--espresso)',
-            ['--halo' as string]: 'rgba(124, 132, 102, 0.30)',
-            color: 'var(--card)',
-          }}
-        >
-          <p className="halo-content font-display text-[10px] font-semibold uppercase tracking-[0.30em]" style={{ color: 'var(--accent-warm)' }}>
-            the one rule
-          </p>
-          <p className="halo-content mt-2 font-display text-[20px] font-semibold leading-snug md:text-[24px]">
-            Never <span className="italic mark-amber" style={{ color: 'var(--ink)' }}>blend</span> a score that hides{' '}
-            <span className="u-bold" style={{ textDecorationColor: 'var(--accent-warm)' }}>who disagrees</span>.
-          </p>
-          <p className="halo-content mt-3 max-w-2xl text-[11px] leading-relaxed md:text-[12.5px]" style={{ color: '#D5CCB7' }}>
-            Weights are yours, computed at read time, never stored. Funding model
-            travels with every rating.
-          </p>
-        </div>
       </section>
       </div>
     </main>

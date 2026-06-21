@@ -16,33 +16,46 @@ export default async function AlternativesPage({ params }: PageProps) {
   const alternatives = await repository.listAlternatives(id);
 
   return (
-    <main className="mx-auto w-full max-w-xl px-5 pt-4 pb-10 md:px-6 md:pt-8">
-      <nav className="mb-6 text-xs text-ink-3">
-        <Link href={`/product/${id}`} className="hover:text-ink">
-          ← {base.product.displayName}
-        </Link>
+    <main className="mx-auto w-full max-w-5xl px-5 pt-5 pb-4 md:px-8 md:pt-7">
+      <nav className="mb-4 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+        <Link href="/browse" className="hover:text-ink">Catalog</Link>
+        <span aria-hidden>/</span>
+        <Link href={`/product/${id}`} className="truncate hover:text-ink">{base.product.displayName}</Link>
+        <span aria-hidden>/</span>
+        <span className="text-ink">Alternatives</span>
       </nav>
 
-      <header className="mb-5">
-        <h1 className="text-[22px] font-semibold leading-tight text-ink">Cleaner alternatives</h1>
-        <p className="mt-2 text-sm text-ink-2">
-          Same category, ranked by <span className="text-ink">ingredient safety</span> only. Never by
-          affiliate payout — even after a revenue model exists.
-        </p>
+      <header
+        className="relative mb-6 overflow-hidden rounded-card halo-tr anim-rise"
+        style={{ background: 'var(--card)', border: '1px solid var(--line)', ['--halo' as string]: 'var(--halo-leaf)' }}
+      >
+        <div className="halo-content p-5 md:p-6">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--verdict-excellent)' }}>
+            Cleaner options
+          </p>
+          <h1 className="mt-1 font-display text-[28px] font-semibold leading-tight text-ink md:text-[34px]">
+            Cleaner alternatives
+          </h1>
+          <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-ink-2">
+            Same category, ranked by <span className="font-semibold text-ink">ingredient safety</span> only —
+            never by affiliate payout, even after a revenue model exists.
+          </p>
+        </div>
       </header>
 
       {alternatives.length === 0 ? (
-        <p className="rounded-card bg-card px-4 py-6 text-sm text-ink-2 ring-1 ring-line">
+        <p className="rounded-card bg-card px-5 py-7 text-sm text-ink-2" style={{ border: '1px solid var(--line)' }}>
           No cleaner alternatives in the current catalog. More land as Open Beauty Facts ingestion comes
           online.
         </p>
       ) : (
-        <ul className="space-y-4">
+        <ul className="grid gap-4 md:grid-cols-2">
           {alternatives.map(({ view, cleaner, tradeoffs }) => (
-            <li key={view.product.id}>
+            <li key={view.product.id} className="h-full">
               <Link
                 href={`/product/${view.product.id}`}
-                className="block rounded-card bg-card p-5 shadow-card ring-1 ring-line transition hover:ring-accent"
+                className="block h-full rounded-card bg-card p-5 shadow-card transition hover:shadow-lift"
+                style={{ border: '1px solid var(--line)' }}
               >
                 <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-ink-3">
                   {view.brand.name}

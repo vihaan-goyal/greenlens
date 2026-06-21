@@ -1,18 +1,21 @@
+import { SiteHeader } from '@/components/SiteHeader';
+import { SiteFooter } from '@/components/SiteFooter';
+
 /**
- * Shell for the app screens (catalog + product). Full-width and responsive:
- * each page owns its own width, so the catalog can spread into a multi-column
- * grid on desktop while the detail pages center at a comfortable reading width.
+ * Shell for the app screens (catalog + product + detail pages). This is what
+ * turns a set of stranded screens into one website: a persistent masthead at the
+ * top, the page content on a warm canvas, and a grounding footer at the bottom.
  *
- *   • real phones (narrow): full-bleed, edge to edge — the device is the frame.
- *   • desktop (wide): the page fills the screen on a warm canvas with soft
- *     ambient washes, like a real web app rather than a centered phone column.
- *
- * The document scrolls natively. URLs are unchanged — this only restyles chrome.
+ * The whole thing is a flex column at min screen height so short pages still push
+ * the footer to the bottom edge — no page ever floats in an unbounded void. Each
+ * page owns its own max-width inside `main`, so the catalog can spread wide while
+ * detail pages keep a comfortable two-column reading layout.
  */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-screen" style={{ background: 'var(--bg)' }}>
-      {/* Ambient botanical washes — desktop only, so wide screens stay warm. */}
+    <div className="relative flex min-h-screen flex-col" style={{ background: 'var(--bg)' }}>
+      {/* Ambient botanical washes — fixed, desktop only, kept faint so wide
+          screens stay warm without washing out the content. */}
       <span
         aria-hidden
         className="pointer-events-none fixed -right-40 -top-40 hidden h-[36rem] w-[36rem] rounded-full anim-shimmer md:block"
@@ -23,7 +26,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         className="pointer-events-none fixed -left-48 bottom-0 hidden h-[32rem] w-[32rem] rounded-full md:block"
         style={{ background: 'radial-gradient(closest-side, var(--halo-amber), transparent 70%)' }}
       />
-      <div className="relative z-10">{children}</div>
+
+      <SiteHeader />
+      <div className="relative z-10 flex-1">{children}</div>
+      <div className="relative z-10">
+        <SiteFooter />
+      </div>
     </div>
   );
 }
