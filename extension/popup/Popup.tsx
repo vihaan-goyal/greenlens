@@ -513,8 +513,16 @@ function VerdictRing({ mean, min, max, color, label, available }: RingProps) {
 
 function IdleBlock() {
   return (
-    <section className="gl-section gl-blank">
-      <Sonion mood="neutral" size={56} idle />
+    <section className="gl-section gl-idle">
+      <div className="gl-lens">
+        <span className="gl-lens-ring" aria-hidden />
+        <span className="gl-lens-ring gl-lens-ring--inner" aria-hidden />
+        <Sonion mood="neutral" size={56} idle />
+      </div>
+      <p className="gl-idle-status">
+        <span className="gl-idle-pulse" aria-hidden />
+        Standing by
+      </p>
       <p className="gl-blank-title">Open a cosmetic product on Amazon</p>
       <p className="gl-blank-body">
         I show every rating source side-by-side once you land on a product page.
