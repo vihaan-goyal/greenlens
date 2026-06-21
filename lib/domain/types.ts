@@ -107,6 +107,18 @@ export interface NormalizedRating {
   score: number;
   /** Raw native score, kept for display alongside the normalized value. */
   raw: number;
+  // ── Match provenance ──
+  // How this rating's Listing was matched to the canonical Product (the
+  // ListingMatch behind it). A rating shown on a product is an implicit claim
+  // that it's *about* that product; weak/unreviewed matches weaken that claim,
+  // so the UI surfaces them instead of hiding them. Optional: curated/seed data
+  // and any caller that doesn't carry a match reads as a clean, certain match.
+  /** Matcher confidence for the Listing→Product match, 0..1. */
+  matchConfidence?: number;
+  /** How the match was made, e.g. 'seed', 'obf-auto', 'obf-new'. */
+  matchMethod?: string;
+  /** Whether a human has confirmed the match. */
+  matchReviewed?: boolean;
 }
 
 export interface PillarSummary {

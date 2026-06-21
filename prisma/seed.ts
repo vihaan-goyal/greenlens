@@ -17,6 +17,7 @@ import {
   RATINGS,
   SEED,
   SOURCES,
+  seedMatch,
 } from '../lib/data/seed-data.ts';
 
 const prisma = new PrismaClient();
@@ -91,15 +92,14 @@ async function main() {
     })),
   });
 
-  // One high-confidence match per seed listing — these are hand-curated, so the
-  // matcher's verdict is taken as given (confidence 1, reviewed).
+  // One match per seed listing, carrying each row's own provenance (defaulting
+  // to a certain curated match) so GREENLENS_REPO=prisma renders identically to
+  // the mock repo — including the deliberately weak/unreviewed rows.
   await prisma.listingMatch.createMany({
     data: SEED.map((s) => ({
       listingId: s.listingId,
       productId: s.productId,
-      confidence: 1,
-      method: 'seed',
-      reviewed: true,
+      ...seedMatch(s),
     })),
   });
 
