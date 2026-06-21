@@ -4,11 +4,10 @@ import { summarizePillars } from '../domain/scoring';
 import {
   BRANDS,
   INGREDIENT_FLAGS,
-  LISTINGS,
   PRODUCTS,
-  RATINGS,
   SEED,
   SOURCES,
+  seedMatch,
 } from './seed-data';
 import type { AlternativeView, ProductRepository, ProductView } from './repository';
 
@@ -29,12 +28,18 @@ export function ingredientSlug(name: string): string {
 
 function buildView(product: Product): ProductView {
   const brand = BRANDS.find((b) => b.id === product.brandId)!;
-  const productListingIds = new Set(
-    SEED.filter((s) => s.productId === product.id).map((s) => s.listingId),
-  );
-  const productRatings = RATINGS.filter((r) => productListingIds.has(r.listingId)).map((r) => {
-    const listing = LISTINGS.find((l) => l.id === r.listingId)!;
-    return { sourceId: listing.sourceId, scoreRaw: r.scoreRaw };
+  // Map straight off the seed match rows so each rating carries the provenance
+  // of the ListingMatch behind it (confidence/method/reviewed), defaulting to a
+  // certain curated match for rows that don't specify one.
+  const productRatings = SEED.filter((s) => s.productId === product.id).map((s) => {
+    const m = seedMatch(s);
+    return {
+      sourceId: s.sourceId,
+      scoreRaw: s.scoreRaw,
+      matchConfidence: m.confidence,
+      matchMethod: m.method,
+      matchReviewed: m.reviewed,
+    };
   });
   const pillars = summarizePillars(productRatings, SOURCES);
   return { product, brand, pillars, sources: SOURCES };

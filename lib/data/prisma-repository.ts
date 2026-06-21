@@ -117,8 +117,17 @@ export class PrismaProductRepository implements ProductRepository {
     if (!row) return null;
 
     const sources = await this.sources();
+    // Carry each match's provenance (confidence/method/reviewed) onto its ratings
+    // so the domain layer and UI can surface weak/unreviewed matches instead of
+    // silently presenting them as certain. See lib/domain/provenance.
     const ratings = row.matches.flatMap((m) =>
-      m.listing.ratings.map((r) => ({ sourceId: m.listing.sourceId, scoreRaw: r.scoreRaw })),
+      m.listing.ratings.map((r) => ({
+        sourceId: m.listing.sourceId,
+        scoreRaw: r.scoreRaw,
+        matchConfidence: m.confidence,
+        matchMethod: m.method,
+        matchReviewed: m.reviewed,
+      })),
     );
     const pillars = summarizePillars(ratings, sources);
     return { product: toProduct(row), brand: toBrand(row.brand), pillars, sources };

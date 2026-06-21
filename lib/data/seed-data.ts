@@ -533,6 +533,22 @@ export interface SeedRating {
   sourceId: string;
   scoreRaw: number;
   scoreLabel?: string;
+  // ── Match provenance (the ListingMatch behind this rating) ──
+  // Omitted means a curated, certain match: confidence 1, reviewed. A few rows
+  // below carry weaker/unreviewed matches on purpose, so the default mock path
+  // demonstrates how provenance surfaces in the UI (see lib/domain/provenance).
+  confidence?: number;
+  method?: string;
+  reviewed?: boolean;
+}
+
+/** Provenance for a seed row, defaulting omitted rows to a certain curated match. */
+export function seedMatch(s: SeedRating): { confidence: number; method: string; reviewed: boolean } {
+  return {
+    confidence: s.confidence ?? 1,
+    method: s.method ?? 'seed',
+    reviewed: s.reviewed ?? true,
+  };
 }
 
 export const SEED: SeedRating[] = [
@@ -557,7 +573,10 @@ export const SEED: SeedRating[] = [
 
   // ── Fern stabilized vitamin C (cleaner alternative serum) ────────────────
   { listingId: 'l-vitcx-ewg', productId: 'prod-vitc-clean', sourceId: 'ewg', scoreRaw: 1, scoreLabel: 'Low concern' },
-  { listingId: 'l-vitcx-yuka', productId: 'prod-vitc-clean', sourceId: 'yuka', scoreRaw: 95, scoreLabel: 'Excellent' },
+  // Indie no-barcode brand (Fern): the Yuka listing resolved to this product on
+  // a below-threshold, unreviewed match — the per-product face of the tail-recall
+  // fairness finding (see matcher memory). Surfaced, not hidden.
+  { listingId: 'l-vitcx-yuka', productId: 'prod-vitc-clean', sourceId: 'yuka', scoreRaw: 95, scoreLabel: 'Excellent', confidence: 0.62, method: 'obf-auto', reviewed: false },
   { listingId: 'l-vitcx-inci', productId: 'prod-vitc-clean', sourceId: 'inci-beauty', scoreRaw: 18, scoreLabel: 'Excellent' },
   { listingId: 'l-vitcx-eco', productId: 'prod-vitc-clean', sourceId: 'obf-eco', scoreRaw: 72 },
   { listingId: 'l-vitcx-labor', productId: 'prod-vitc-clean', sourceId: 'good-on-you', scoreRaw: 4 },
@@ -672,12 +691,13 @@ export const SEED: SeedRating[] = [
   { listingId: 'l-glo-pkg', productId: 'prod-glossier-balm', sourceId: 'how2recycle', scoreRaw: 50 },
 
   // ── Pacifica Vegan Collagen — clean/vegan/independent; raters mostly agree
+  // Sparse coverage on purpose: only safety + environmental sources cover this
+  // product (no labor/packaging rating), so the page can say "2 of 4 axes" and
+  // remind the reader that a missing rating isn't a clean bill of health.
   { listingId: 'l-pac-ewg', productId: 'prod-pacifica-collagen', sourceId: 'ewg', scoreRaw: 2, scoreLabel: 'Low concern' },
   { listingId: 'l-pac-yuka', productId: 'prod-pacifica-collagen', sourceId: 'yuka', scoreRaw: 84, scoreLabel: 'Excellent' },
   { listingId: 'l-pac-inci', productId: 'prod-pacifica-collagen', sourceId: 'inci-beauty', scoreRaw: 16 },
   { listingId: 'l-pac-eco', productId: 'prod-pacifica-collagen', sourceId: 'obf-eco', scoreRaw: 72 },
-  { listingId: 'l-pac-labor', productId: 'prod-pacifica-collagen', sourceId: 'good-on-you', scoreRaw: 4 },
-  { listingId: 'l-pac-pkg', productId: 'prod-pacifica-collagen', sourceId: 'how2recycle', scoreRaw: 68 },
 ];
 
 export const LISTINGS: Listing[] = SEED.map((s) => {

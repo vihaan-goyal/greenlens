@@ -8,6 +8,7 @@ import { ScoreRing } from '@/components/ScoreRing';
 import { PillarBars } from '@/components/PillarBars';
 import { ScoreMethodology } from '@/components/ScoreMethodology';
 import { DisagreementCallout } from '@/components/DisagreementCallout';
+import { MatchProvenance } from '@/components/MatchProvenance';
 import { BrandMark } from '@/components/BrandMark';
 import { SonionReactive } from '@/components/SonionReactive';
 import { RecordView } from '@/components/RecordView';
@@ -177,6 +178,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
           style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
         >
           <RaterSpread pillars={pillars} />
+        </div>
+        {/* How well these ratings are matched to this product, and how complete
+            the coverage is — surfaced, not hidden (see CLAUDE.md). */}
+        <div className="mt-3">
+          <MatchProvenance pillars={pillars} />
         </div>
       </section>
 

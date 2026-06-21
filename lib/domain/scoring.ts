@@ -16,6 +16,11 @@ import {
 export interface ScoredRating {
   sourceId: string;
   scoreRaw: number;
+  // Match provenance carried from the ListingMatch the data layer joined. See
+  // NormalizedRating in types.ts. Optional — absent means a clean, certain match.
+  matchConfidence?: number;
+  matchMethod?: string;
+  matchReviewed?: boolean;
 }
 
 /** Threshold (normalized 0-100 points) at which same-axis ratings count as disagreeing. */
@@ -67,6 +72,9 @@ export function summarizePillars(
       fundingModel: source.fundingModel,
       score: normalizeScore(r.scoreRaw, source),
       raw: r.scoreRaw,
+      matchConfidence: r.matchConfidence,
+      matchMethod: r.matchMethod,
+      matchReviewed: r.matchReviewed,
     };
     pillars[source.axis].ratings.push(normalized);
   }

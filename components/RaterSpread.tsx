@@ -6,6 +6,7 @@ import {
   type Pillars,
 } from '@/lib/domain/types';
 import { VERDICT_VAR, verdictBand } from '@/lib/domain/verdict';
+import { type MatchTier, ratingTier } from '@/lib/domain/provenance';
 
 /**
  * The product-page hero. Per-axis, each rater is a row with name + a prominent
@@ -69,6 +70,7 @@ export function RaterSpread({ pillars }: { pillars: Pillars }) {
                           {r.sourceName}
                         </span>
                         <FundingChip funding={r.fundingModel} />
+                        <MatchChip tier={ratingTier(r)} />
                       </div>
                       <span
                         className="shrink-0 font-display text-[20px] font-semibold leading-none tabular"
@@ -158,6 +160,40 @@ function FundingChip({ funding }: { funding: FundingModel }) {
       }}
     >
       {FUNDING_LABEL[funding]}
+    </span>
+  );
+}
+
+// Match provenance marker. Verified matches (curated, reviewed) render nothing —
+// the common case stays clean. Only non-verified matches carry a caveat, so the
+// reader knows this rating's link to *this* product is less certain. `weak`
+// (below-threshold) gets a caution tone; `auto` (unreviewed but confident) stays
+// neutral. Never alarmist — it's a confidence note, not a verdict.
+const MATCH_LABEL: Record<Exclude<MatchTier, 'verified'>, string> = {
+  auto: 'unverified match',
+  weak: 'weak match',
+};
+
+function MatchChip({ tier }: { tier: MatchTier }) {
+  if (tier === 'verified') return null;
+  const label = MATCH_LABEL[tier];
+  const caution = tier === 'weak';
+  return (
+    <span
+      className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em]"
+      style={{
+        background: 'transparent',
+        color: caution ? 'var(--verdict-poor)' : 'var(--ink-3)',
+        border: `1px solid ${caution ? 'var(--verdict-poor)' : 'var(--ink-3)'}`,
+      }}
+      title={
+        caution
+          ? 'This rating was auto-linked to this product on a low-confidence match — it may describe a different size or variant.'
+          : 'This rating was auto-linked to this product and not yet human-reviewed.'
+      }
+      aria-label={`Listing match: ${label}`}
+    >
+      {label}
     </span>
   );
 }

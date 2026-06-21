@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { repository } from '@/lib/data';
+import { MatchProvenance } from '@/components/MatchProvenance';
 import { VERDICT_VAR } from '@/lib/domain/verdict';
 import {
   FUNDING_LABEL,
@@ -80,6 +81,13 @@ export default async function FlagPage({ params }: PageProps) {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* Product-level coverage caveat. The per-rater stances above are
+          hand-authored, so match confidence applies to the product's whole rating
+          set, not to an individual stance — surface it here for the same honesty. */}
+      <section className="mb-8">
+        <MatchProvenance pillars={base.pillars} />
       </section>
 
       {flag.notes.length > 0 && (
