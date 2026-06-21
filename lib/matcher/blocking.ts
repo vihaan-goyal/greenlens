@@ -6,13 +6,17 @@
 //   gtin:<14-digit>        normalized so UPC-A/EAN-13/GTIN-14 collide
 //   brand+token:<id>:<t>   canonical brand id × first non-stopword name token
 //   brand:<id>             coarse fallback so a stripped name still matches
+//   ing:<band>:<bucket>    ingredient MinHash/LSH bands (see minhash.ts)
 //
-// Seam: ingredient MinHash blocks plug in here later for the long-tail no-
-// barcode case. The signature (item → keys) stays the same; only new keys
-// get added.
+// The ingredient MinHash blocks (`ing:` keys) cover the long-tail no-barcode
+// case: a listing whose brand fails to canonicalize and carries no GTIN has no
+// gtin/brand key to share, but still collides with the same product on an
+// ingredient band. As designed, this only *adds* keys — every downstream caller
+// iterates blockKeys() generically, so nothing else changes.
 
 import type { Brand } from '../domain/types';
 import type { MatchableItem } from './features';
+import { ingredientBlockKeys } from './minhash';
 
 /**
  * Strip non-digits and left-pad to 14. UPC-A is 12, EAN-13 is 13, GTIN-14 is
@@ -75,6 +79,9 @@ export function blockKeys(item: MatchableItem, brands: ReadonlyArray<Brand>): st
   const firstTok = firstNameToken(item.name);
   if (brandId && firstTok) keys.push(`brand+token:${brandId}:${firstTok}`);
   if (brandId) keys.push(`brand:${brandId}`);
+  // Ingredient MinHash bands — brand/barcode-independent, added only for items
+  // rich enough to MinHash (see minhash.ts). Empty for thin-data listings.
+  keys.push(...ingredientBlockKeys(item));
   return keys;
 }
 
