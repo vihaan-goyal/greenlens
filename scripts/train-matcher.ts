@@ -15,7 +15,8 @@
 //
 // Run (needs DATABASE_URL + the .ts hook):
 //   npm run matcher:train
-//   npm run matcher:train -- --pos 4 --neg 4 --epochs 1500 --lr 0.5 --seed 7
+//   npm run matcher:train -- --pos 4 --neg 4 --brandless 2 --epochs 1500 --seed 7
+//   npm run matcher:train -- --brandless 0          # disable brandless positives
 
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -37,6 +38,7 @@ import { EVAL_BRANDS, EVAL_PAIRS } from '../lib/matcher/eval-pairs';
 interface Args {
   pos: number;
   neg: number;
+  brandless: number;
   epochs: number;
   lr: number;
   l2: number;
@@ -45,12 +47,13 @@ interface Args {
 }
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { pos: 3, neg: 3, epochs: 1200, lr: 0.5, l2: 1e-3, seed: 1234, testFrac: 0.2 };
+  const a: Args = { pos: 3, neg: 3, brandless: 1, epochs: 1200, lr: 0.5, l2: 1e-3, seed: 1234, testFrac: 0.2 };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     const next = () => Number(argv[++i]);
     if (k === '--pos') a.pos = next();
     else if (k === '--neg') a.neg = next();
+    else if (k === '--brandless') a.brandless = next();
     else if (k === '--epochs') a.epochs = next();
     else if (k === '--lr') a.lr = next();
     else if (k === '--l2') a.l2 = next();
@@ -67,6 +70,7 @@ async function main() {
   const pairs = generateLabeledPairs(catalog, brands, {
     positivesPerProduct: args.pos,
     negativesPerProduct: args.neg,
+    brandlessPositivesPerProduct: args.brandless,
     keepGtinFraction: 0.4,
     rng: mulberry32(args.seed),
   });
@@ -155,7 +159,7 @@ function report(
 ) {
   console.log(
     `\nTRAIN-MATCHER  |  catalog ${catalogSize} products  |  pairs ${nTrain}+${nTest} ` +
-      `(${nPos} train positives)  |  pos/neg per product ${args.pos}/${args.neg}\n`,
+      `(${nPos} train positives)  |  pos/neg/brandless per product ${args.pos}/${args.neg}/${args.brandless}\n`,
   );
   console.log(`threshold ${model.threshold.toFixed(3)}   bias ${model.bias.toFixed(3)}\n`);
   console.log(metricLine('held-out synthetic test', test));

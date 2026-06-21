@@ -70,6 +70,19 @@ export interface LabelOptions {
    * Fires only for products whose name carries a mutable variant token.
    */
   variantNegativesPerProduct?: number;
+  /**
+   * Brandless positives: a product paired with a *name+ingredient-only* sighting
+   * of itself — no brand, no GTIN, no size. This is the regime MinHash ingredient
+   * blocking newly surfaces (a no-barcode listing whose brand doesn't
+   * canonicalize) but that the scorer rejects: with brand absent, even a perfect
+   * ingredient overlap + full name containment tops out ~0.877, just under the
+   * threshold, because every other positive the model ever saw carried a brand.
+   * These teach it that brand *absent* — distinct from brand *mismatched* — is
+   * neutral, not disqualifying. Emitted only for ingredient-rich products (the
+   * blockable regime); the cross-brand brandMatch=false negatives still anchor the
+   * separate "different brand" signal so this doesn't erode brand discrimination.
+   */
+  brandlessPositivesPerProduct?: number;
   /** Fraction of synthetic sightings that keep their GTIN (the rest drop it). */
   keepGtinFraction?: number;
   rng?: Rng;
@@ -80,6 +93,9 @@ const DEFAULTS: Required<Omit<LabelOptions, 'rng'>> = {
   negativesPerProduct: 2,
   crossBrandNegativesPerProduct: 1,
   variantNegativesPerProduct: 1,
+  // Off by default so existing callers (and the end-to-end eval test) are
+  // unchanged; the training script opts in. Minimum needed to teach brand-absent.
+  brandlessPositivesPerProduct: 0,
   keepGtinFraction: 0.4,
 };
 
@@ -141,6 +157,27 @@ export function variantMutatedSighting(entry: CatalogEntry, rng: Rng): Matchable
   };
 }
 
+/**
+ * A name+ingredient-only sighting of `entry`: no brand, no GTIN, no size — the
+ * degraded shape of a no-barcode listing whose brand field was empty or garbled
+ * (a common OBF row). The name keeps the catalog name plus a marketing tail but
+ * NO brand prefix, and the ingredient list is sometimes truncated to the actives,
+ * exactly as `degradedSighting` does. Paired with `entry` this is a label-1
+ * positive whose only same-product evidence is name + ingredients.
+ */
+export function brandlessPositiveSighting(entry: CatalogEntry, rng: Rng): MatchableItem {
+  const tail = pick(MARKETING_TAILS, rng);
+  const name = `${entry.name} ${tail}`.replace(/\s+/g, ' ').trim();
+
+  let ingredients = entry.ingredients;
+  if (ingredients && ingredients.length > 5 && rng() < 0.5) {
+    const keep = 5 + Math.floor(rng() * (ingredients.length - 5));
+    ingredients = ingredients.slice(0, keep);
+  }
+
+  return { id: `brandless-${entry.productId}`, name, ingredients };
+}
+
 /** Distinct catalog entries that share a block key with `entry`, minus itself. */
 function sameBlockOthers(
   entry: CatalogEntry,
@@ -188,8 +225,10 @@ function crossBrandOthers(
 /**
  * Generate labeled feature pairs from a catalog. Each product contributes up to
  * `positivesPerProduct` self-sightings (label 1), `negativesPerProduct` same-block
- * sibling sightings (label 0), and `crossBrandNegativesPerProduct` different-brand
- * same-name sightings (label 0).
+ * sibling sightings (label 0), `crossBrandNegativesPerProduct` different-brand
+ * same-name sightings (label 0), `variantNegativesPerProduct` variant-SKU
+ * sightings (label 0), and — for ingredient-rich products —
+ * `brandlessPositivesPerProduct` name+ingredient-only self-sightings (label 1).
  */
 export function generateLabeledPairs(
   catalog: ReadonlyArray<CatalogEntry>,
@@ -202,6 +241,8 @@ export function generateLabeledPairs(
     opts.crossBrandNegativesPerProduct ?? DEFAULTS.crossBrandNegativesPerProduct;
   const variantNegativesPerProduct =
     opts.variantNegativesPerProduct ?? DEFAULTS.variantNegativesPerProduct;
+  const brandlessPositivesPerProduct =
+    opts.brandlessPositivesPerProduct ?? DEFAULTS.brandlessPositivesPerProduct;
   const keepGtinFraction = opts.keepGtinFraction ?? DEFAULTS.keepGtinFraction;
   const rng = opts.rng ?? Math.random;
 
@@ -256,6 +297,22 @@ export function generateLabeledPairs(
         features: computeFeatures(entry, mutated, brands),
         label: 0,
       });
+    }
+
+    // Brandless positives only for ingredient-rich products — the regime where
+    // MinHash can actually block the no-brand sighting, so the model only learns
+    // to accept brand-absent matches where name+ingredients carry real evidence
+    // (a name-only brandless match would be too weak to trust).
+    if ((entry.ingredients?.length ?? 0) >= 5) {
+      for (let i = 0; i < brandlessPositivesPerProduct; i++) {
+        const sighting = brandlessPositiveSighting(entry, rng);
+        pairs.push({
+          a: entry.productId,
+          b: sighting.id,
+          features: computeFeatures(entry, sighting, brands),
+          label: 1,
+        });
+      }
     }
 
     if (crossBrandNegativesPerProduct > 0 && flatPool.length > 1) {

@@ -305,6 +305,24 @@ describe('matcher / resolveItem — live extension lookup', () => {
     expect(r?.ambiguous).toBe(false);
   });
 
+  // Regression guard for the brandless-positive retrain. A no-barcode listing
+  // whose brand field is empty/garbled (no brand at all) used to top out ~0.877,
+  // just under the old 0.885 threshold, so it resolved to nothing even though
+  // MinHash now blocks it. After training the model on brandless positives, a
+  // strong name+ingredient match with brand ABSENT (distinct from brand
+  // mismatched) clears the threshold. If brandless training is ever disabled
+  // (matcher:train --brandless 0), this flips back to null and fails here.
+  it('resolves a brandless, no-GTIN sighting on name + ingredients alone', () => {
+    const brandless: MatchableItem = {
+      id: 'amzn-brandless',
+      // No brand, no GTIN — only a marketing-suffixed name and the INCI list.
+      name: 'Ceramide Repair Cream Hydrating Fragrance Free For Normal to Dry Skin',
+      ingredients: ['water', 'glycerin', 'ceramide np', 'niacinamide', 'squalane'],
+    };
+    const r = resolveItem(brandless, catalog, BRANDS);
+    expect(r?.productId).toBe('prod-B');
+  });
+
   // Precision guard: two same-brand siblings ("Glow Serum" vs "Glow Serum Plus")
   // can both clear the threshold for a vague title. The matcher still returns the
   // best one (recall preserved) but marks it ambiguous so the UI can hedge rather
