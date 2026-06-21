@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Brand } from '../domain/types';
-import { generateCandidatePairs } from './blocking';
+import { blockKeys, generateCandidatePairs } from './blocking';
 import type { MatchableItem } from './features';
 import { clusterListings, resolveItem, type CatalogEntry } from './matcher';
 
@@ -151,6 +151,14 @@ describe('matcher / coverage bias — the matcher is worse on the tail, and we s
         : b,
     );
     const result = clusterListings(LISTINGS, biased);
+
+    // Note: ingredient MinHash now makes C-name1/C-name2 *candidate* pairs (their
+    // INCI lists are identical), but the two brand spellings canonicalize
+    // differently with the alias dropped, so brandMatch is FALSE and the pair
+    // scores below threshold — the fracture holds, now enforced at scoring rather
+    // than blocking. The honest reframing: MinHash recovers the tail fracture only
+    // when ingredients bridge it without a contradicting brand signal — see the
+    // "MinHash blocking" describe below for the case it does and doesn't recover.
 
     // The indie product splits into two singletons.
     const c1 = clusterContaining(result.clusters, 'C-name1');
@@ -313,5 +321,76 @@ describe('matcher / resolveItem — live extension lookup', () => {
     const r = resolveItem(vague, siblings, BRANDS);
     expect(r).not.toBeNull();
     expect(r!.ambiguous).toBe(true);
+  });
+});
+
+describe('matcher / MinHash blocking — recovers ingredient-rich unblockable listings, not thin ones', () => {
+  // The case the gtin/brand keys cannot reach: a no-barcode listing whose brand
+  // does not canonicalize (a garbled/empty OBF brand field). Without an
+  // ingredient bridge it has ZERO block keys, so it can never be a candidate and
+  // it fractures from its own product. MinHash gives it a brand-independent key.
+  //
+  // Two products, each with two listings of itself:
+  //   • RICH product — one branded listing + one *brandless* listing, identical
+  //     5-ingredient INCI. The brandless listing is unblockable without MinHash.
+  //   • THIN product — two brandless listings with only 3 ingredients, below the
+  //     MinHash richness floor, so neither gets ingredient keys either.
+  const brands: Brand[] = [{ id: 'indie', name: 'Fern & Field', aliases: ['fern field'] }];
+
+  const richIngredients = ['aqua', 'glycerin', 'ceramide np', 'squalane', 'panthenol'];
+  const richBranded: MatchableItem = {
+    id: 'rich-branded',
+    brand: 'Fern & Field',
+    name: 'Bare Ceramide Cream',
+    ingredients: richIngredients,
+    sizeValue: 50,
+    sizeUnit: 'ml',
+  };
+  const richBrandless: MatchableItem = {
+    // Same product, but the source dropped the brand and the barcode.
+    id: 'rich-brandless',
+    name: 'Bare Ceramide Cream',
+    ingredients: richIngredients,
+    sizeValue: 50,
+    sizeUnit: 'ml',
+  };
+
+  const thinIngredients = ['castor seed oil', 'beeswax', 'tocopherol'];
+  const thin1: MatchableItem = { id: 'thin-1', name: 'Tinted Lip Oil', ingredients: thinIngredients };
+  const thin2: MatchableItem = { id: 'thin-2', name: 'Tinted Lip Oil', ingredients: thinIngredients };
+
+  it('the brandless rich listing is unblockable WITHOUT the ingredient bridge', () => {
+    // Its only keys are ingredient bands — no gtin, no resolvable brand. That is
+    // exactly the listing the old blocking missed entirely.
+    const keys = blockKeys(richBrandless, brands);
+    expect(keys.length).toBeGreaterThan(0);
+    expect(keys.every((k) => k.startsWith('ing:'))).toBe(true);
+  });
+
+  it('the thin listing stays unblockable — MinHash cannot bridge below the floor', () => {
+    // No gtin, no brand, and too few ingredients to MinHash → no keys at all.
+    expect(blockKeys(thin1, brands)).toEqual([]);
+  });
+
+  it('MinHash reunites the rich product across the brandless gap', () => {
+    const result = clusterListings([richBranded, richBrandless, thin1, thin2], brands);
+    const rich = clusterContaining(result.clusters, 'rich-branded');
+    expect(rich.has('rich-brandless')).toBe(true);
+  });
+
+  it('the thin product still fractures — the residual tail gap, surfaced not hidden', () => {
+    const result = clusterListings([richBranded, richBrandless, thin1, thin2], brands);
+    const c1 = clusterContaining(result.clusters, 'thin-1');
+    const c2 = clusterContaining(result.clusters, 'thin-2');
+    expect(c1).not.toEqual(c2);
+    expect(c1.has('thin-2')).toBe(false);
+    expect(c2.has('thin-1')).toBe(false);
+  });
+
+  it('does not over-merge: the rich and thin products stay separate', () => {
+    const result = clusterListings([richBranded, richBrandless, thin1, thin2], brands);
+    const rich = clusterContaining(result.clusters, 'rich-branded');
+    expect(rich.has('thin-1')).toBe(false);
+    expect(rich.has('thin-2')).toBe(false);
   });
 });

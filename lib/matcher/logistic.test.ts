@@ -136,7 +136,7 @@ const TRAIN_CATALOG: CatalogEntry[] = [
 ];
 
 describe('labeling / generateLabeledPairs', () => {
-  it('emits self-positives and same-block hard negatives (same brand, different product)', () => {
+  it('emits self-positives and same-block hard negatives (different product, shared block)', () => {
     const pairs = generateLabeledPairs(TRAIN_CATALOG, TRAIN_BRANDS, {
       positivesPerProduct: 2,
       negativesPerProduct: 2,
@@ -148,10 +148,15 @@ describe('labeling / generateLabeledPairs', () => {
 
     expect(positives.length).toBe(TRAIN_CATALOG.length * 2);
     expect(negatives.length).toBeGreaterThan(0);
-    // Same-block negatives pair two *different* products of the *same* brand —
-    // that's precisely what makes them hard (brandMatch is true on both classes).
+    // Same-block negatives pair two *different* products that share a block key —
+    // the hard, in-block case the matcher must actually tell apart.
     expect(negatives.every((p) => p.a !== p.b)).toBe(true);
-    expect(negatives.every((p) => p.features.brandMatch === true)).toBe(true);
+    // Same-brand siblings are still surfaced (the classic hard case: brandMatch is
+    // true on both classes). Since ingredient MinHash bands now also block, the
+    // same-block set additionally includes ingredient-similar *cross-brand* pairs
+    // (brandMatch false) — also genuinely hard, and good training signal — so this
+    // is a "some", not an "every".
+    expect(negatives.some((p) => p.features.brandMatch === true)).toBe(true);
 
     // A positive (self-sighting) carries strong same-product signal pre-training.
     const posFeat = positives.find((p) => p.a === 'ta1')!.features;
