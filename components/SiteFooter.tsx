@@ -42,6 +42,7 @@ export function SiteFooter() {
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-3">Navigate</p>
           <ul className="mt-3 space-y-2 text-[13px] font-medium text-ink-2">
             <li><Link href="/browse" className="hover:text-ink">Catalog</Link></li>
+            <li><Link href="/disagreements" className="hover:text-ink">Where they disagree</Link></li>
             <li><Link href="/#install" className="hover:text-ink">Browser extension</Link></li>
             <li><Link href="/" className="hover:text-ink">How it works</Link></li>
           </ul>

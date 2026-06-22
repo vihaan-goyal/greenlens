@@ -2,6 +2,12 @@
 
 Standing rules for this project. Obey them on every session. Ask before adding any dependency not listed here.
 
+## Context Navigation
+When you need to understand the codebase, docs, or any files in this project:
+1. ALWAYS query the knowledge graph first: `/graphify query "your question"`
+2. Only read raw files if I explicitly say "read the file" or "look at the raw file"
+3. Use `graphify-out/wiki/index.md` as your navigation entrypoint for browsing structure
+
 ## What this is
 Greenlens lets someone look up a cosmetics product and see what every public rating source says about it, where those sources disagree, and a single overall score **whose weighting the user controls**. It leads with personal safety ("is this safe for me"); sustainability and ethics are secondary benefits.
 
