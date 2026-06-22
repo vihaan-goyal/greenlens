@@ -147,6 +147,14 @@ export const BRANDS: Brand[] = [
   { id: 'brand-elf', name: 'e.l.f.', aliases: ['elf', 'elf cosmetics', 'e l f', 'e.l.f. cosmetics'] },
   { id: 'brand-glossier', name: 'Glossier', aliases: ['glossier inc'] },
   { id: 'brand-pacifica', name: 'Pacifica', aliases: ['pacifica beauty'] },
+  { id: 'brand-paulas', name: "Paula's Choice", aliases: ['paulas choice', 'paula choice', 'paula s choice'] },
+  { id: 'brand-cetaphil', name: 'Cetaphil', aliases: ['galderma'] },
+  { id: 'brand-native', name: 'Native', aliases: ['native deodorant', 'native cos'] },
+  { id: 'brand-ogx', name: 'OGX', aliases: ['organix', 'ogx beauty'] },
+  { id: 'brand-fab', name: 'First Aid Beauty', aliases: ['firstaidbeauty', 'fab'] },
+  { id: 'brand-bioderma', name: 'Bioderma', aliases: ['bioderma laboratoire'] },
+  { id: 'brand-cosrx', name: 'COSRX', aliases: ['cos rx', 'cosrx official'] },
+  { id: 'brand-fenty', name: 'Fenty Beauty', aliases: ['fenty', 'fenty beauty by rihanna'] },
 ];
 
 // ─── Products ───────────────────────────────────────────────────────────────
@@ -520,6 +528,168 @@ export const PRODUCTS: Product[] = [
       'Fragrance',
     ],
   },
+  {
+    id: 'prod-paulas-bha',
+    brandId: 'brand-paulas',
+    displayName: 'Skin Perfecting 2% BHA Liquid Exfoliant',
+    category: 'exfoliant',
+    gtin: '655439013002',
+    sizeValue: 118,
+    sizeUnit: 'ml',
+    ingredients: [
+      'Aqua',
+      'Methylpropanediol',
+      'Butylene Glycol',
+      'Salicylic Acid',
+      'Polysorbate 20',
+      'Camellia Oleifera Leaf Extract',
+      'Sodium Hydroxide',
+      'Tetrasodium EDTA',
+    ],
+  },
+  {
+    id: 'prod-cetaphil-cleanser',
+    brandId: 'brand-cetaphil',
+    displayName: 'Gentle Skin Cleanser',
+    category: 'cleanser',
+    gtin: '302993917014',
+    sizeValue: 16,
+    sizeUnit: 'oz',
+    ingredients: [
+      'Aqua',
+      'Glycerin',
+      'Cetyl Alcohol',
+      'Propylene Glycol',
+      'Sodium Lauryl Sulfate',
+      'Stearyl Alcohol',
+      'Methylparaben',
+      'Propylparaben',
+      'Butylparaben',
+    ],
+  },
+  {
+    id: 'prod-native-deo',
+    brandId: 'brand-native',
+    displayName: 'Coconut & Vanilla Deodorant',
+    category: 'deodorant',
+    gtin: '810020170016',
+    sizeValue: 2.65,
+    sizeUnit: 'oz',
+    ingredients: [
+      'Caprylic/Capric Triglyceride',
+      'Tapioca Starch',
+      'Sodium Bicarbonate',
+      'Ozokerite',
+      'Magnesium Hydroxide',
+      'Shea Butter',
+      'Coconut Oil',
+      'Fragrance',
+      'Tocopherol',
+    ],
+  },
+  {
+    id: 'prod-ogx-argan',
+    brandId: 'brand-ogx',
+    displayName: 'Argan Oil of Morocco Shampoo',
+    category: 'shampoo',
+    gtin: '022796910035',
+    sizeValue: 13,
+    sizeUnit: 'oz',
+    ingredients: [
+      'Aqua',
+      'Sodium Laureth Sulfate',
+      'Cocamidopropyl Betaine',
+      'Sodium Chloride',
+      'Argania Spinosa Kernel Oil',
+      'Fragrance',
+      'Dimethicone',
+      'Polyquaternium-7',
+      'Phenoxyethanol',
+      'Methylisothiazolinone',
+    ],
+  },
+  {
+    id: 'prod-fab-repair',
+    brandId: 'brand-fab',
+    displayName: 'Ultra Repair Cream',
+    category: 'moisturizer',
+    gtin: '815517020010',
+    sizeValue: 6,
+    sizeUnit: 'oz',
+    ingredients: [
+      'Aqua',
+      'Stearic Acid',
+      'Glycerin',
+      'Caprylic/Capric Triglyceride',
+      'Cetearyl Alcohol',
+      'Avena Sativa Kernel Flour',
+      'Squalane',
+      'Allantoin',
+      'Ceramide NP',
+      'Phenoxyethanol',
+    ],
+  },
+  {
+    id: 'prod-bioderma-sensibio',
+    brandId: 'brand-bioderma',
+    displayName: 'Sensibio H2O Micellar Water',
+    category: 'micellar water',
+    gtin: '3401528529221',
+    sizeValue: 500,
+    sizeUnit: 'ml',
+    ingredients: [
+      'Aqua',
+      'PEG-6 Caprylic/Capric Glycerides',
+      'Cucumis Sativus Fruit Extract',
+      'Mannitol',
+      'Xylitol',
+      'Propylene Glycol',
+      'Fructooligosaccharides',
+      'Disodium EDTA',
+    ],
+  },
+  {
+    id: 'prod-cosrx-snail',
+    brandId: 'brand-cosrx',
+    displayName: 'Advanced Snail 96 Mucin Power Essence',
+    category: 'essence',
+    gtin: '8809416470016',
+    sizeValue: 100,
+    sizeUnit: 'ml',
+    ingredients: [
+      'Snail Secretion Filtrate',
+      'Betaine',
+      'Butylene Glycol',
+      'Sodium Hyaluronate',
+      'Panthenol',
+      'Allantoin',
+      'Sodium Polyacrylate',
+      'Phenoxyethanol',
+      'Ethylhexylglycerin',
+    ],
+  },
+  {
+    id: 'prod-fenty-filtr',
+    brandId: 'brand-fenty',
+    displayName: "Pro Filt'r Soft Matte Longwear Foundation",
+    category: 'foundation',
+    gtin: '816657020017',
+    sizeValue: 32,
+    sizeUnit: 'ml',
+    ingredients: [
+      'Aqua',
+      'Dimethicone',
+      'Cyclopentasiloxane',
+      'Glycerin',
+      'Trimethylsiloxysilicate',
+      'PEG-10 Dimethicone',
+      'Talc',
+      'Phenoxyethanol',
+      'Iron Oxides',
+      'Titanium Dioxide',
+      'Fragrance',
+    ],
+  },
 ];
 
 // ─── Listings + Ratings ─────────────────────────────────────────────────────
@@ -698,6 +868,71 @@ export const SEED: SeedRating[] = [
   { listingId: 'l-pac-yuka', productId: 'prod-pacifica-collagen', sourceId: 'yuka', scoreRaw: 84, scoreLabel: 'Excellent' },
   { listingId: 'l-pac-inci', productId: 'prod-pacifica-collagen', sourceId: 'inci-beauty', scoreRaw: 16 },
   { listingId: 'l-pac-eco', productId: 'prod-pacifica-collagen', sourceId: 'obf-eco', scoreRaw: 72 },
+
+  // ── Paula's Choice 2% BHA — salicylic acid splits EWG (irritation) vs Yuka ─
+  { listingId: 'l-pc-ewg', productId: 'prod-paulas-bha', sourceId: 'ewg', scoreRaw: 4, scoreLabel: 'Moderate concern' },
+  { listingId: 'l-pc-yuka', productId: 'prod-paulas-bha', sourceId: 'yuka', scoreRaw: 86, scoreLabel: 'Excellent' },
+  { listingId: 'l-pc-inci', productId: 'prod-paulas-bha', sourceId: 'inci-beauty', scoreRaw: 15 },
+  { listingId: 'l-pc-eco', productId: 'prod-paulas-bha', sourceId: 'obf-eco', scoreRaw: 60 },
+  { listingId: 'l-pc-labor', productId: 'prod-paulas-bha', sourceId: 'good-on-you', scoreRaw: 3 },
+  { listingId: 'l-pc-pkg', productId: 'prod-paulas-bha', sourceId: 'how2recycle', scoreRaw: 55 },
+
+  // ── Cetaphil Gentle Skin Cleanser — parabens + SLS keep EWG/Yuka apart ────
+  { listingId: 'l-cet-ewg', productId: 'prod-cetaphil-cleanser', sourceId: 'ewg', scoreRaw: 5, scoreLabel: 'Moderate concern' },
+  { listingId: 'l-cet-yuka', productId: 'prod-cetaphil-cleanser', sourceId: 'yuka', scoreRaw: 58, scoreLabel: 'Fair' },
+  { listingId: 'l-cet-inci', productId: 'prod-cetaphil-cleanser', sourceId: 'inci-beauty', scoreRaw: 9 },
+  { listingId: 'l-cet-eco', productId: 'prod-cetaphil-cleanser', sourceId: 'obf-eco', scoreRaw: 48 },
+  { listingId: 'l-cet-labor', productId: 'prod-cetaphil-cleanser', sourceId: 'good-on-you', scoreRaw: 2 },
+  { listingId: 'l-cet-pkg', productId: 'prod-cetaphil-cleanser', sourceId: 'how2recycle', scoreRaw: 50 },
+
+  // ── Native Deodorant — aluminum-free; baking soda is the irritation debate ─
+  { listingId: 'l-nat-ewg', productId: 'prod-native-deo', sourceId: 'ewg', scoreRaw: 3, scoreLabel: 'Low concern' },
+  { listingId: 'l-nat-yuka', productId: 'prod-native-deo', sourceId: 'yuka', scoreRaw: 68, scoreLabel: 'Good' },
+  { listingId: 'l-nat-inci', productId: 'prod-native-deo', sourceId: 'inci-beauty', scoreRaw: 13 },
+  { listingId: 'l-nat-eco', productId: 'prod-native-deo', sourceId: 'obf-eco', scoreRaw: 58 },
+  { listingId: 'l-nat-labor', productId: 'prod-native-deo', sourceId: 'good-on-you', scoreRaw: 3 },
+  { listingId: 'l-nat-pkg', productId: 'prod-native-deo', sourceId: 'how2recycle', scoreRaw: 60 },
+
+  // ── OGX Argan Oil Shampoo — SLES + MIT + fragrance; the dirtiest of the batch
+  { listingId: 'l-ogx-ewg', productId: 'prod-ogx-argan', sourceId: 'ewg', scoreRaw: 7, scoreLabel: 'High concern' },
+  { listingId: 'l-ogx-yuka', productId: 'prod-ogx-argan', sourceId: 'yuka', scoreRaw: 45, scoreLabel: 'Poor' },
+  { listingId: 'l-ogx-inci', productId: 'prod-ogx-argan', sourceId: 'inci-beauty', scoreRaw: 7 },
+  { listingId: 'l-ogx-eco', productId: 'prod-ogx-argan', sourceId: 'obf-eco', scoreRaw: 38 },
+  { listingId: 'l-ogx-labor', productId: 'prod-ogx-argan', sourceId: 'good-on-you', scoreRaw: 2 },
+  { listingId: 'l-ogx-pkg', productId: 'prod-ogx-argan', sourceId: 'how2recycle', scoreRaw: 44 },
+
+  // ── First Aid Beauty Ultra Repair Cream — colloidal oat; raters mostly agree
+  { listingId: 'l-fab-ewg', productId: 'prod-fab-repair', sourceId: 'ewg', scoreRaw: 2, scoreLabel: 'Low concern' },
+  { listingId: 'l-fab-yuka', productId: 'prod-fab-repair', sourceId: 'yuka', scoreRaw: 84, scoreLabel: 'Excellent' },
+  { listingId: 'l-fab-inci', productId: 'prod-fab-repair', sourceId: 'inci-beauty', scoreRaw: 16 },
+  { listingId: 'l-fab-eco', productId: 'prod-fab-repair', sourceId: 'obf-eco', scoreRaw: 56 },
+  { listingId: 'l-fab-labor', productId: 'prod-fab-repair', sourceId: 'good-on-you', scoreRaw: 3 },
+  { listingId: 'l-fab-pkg', productId: 'prod-fab-repair', sourceId: 'how2recycle', scoreRaw: 54 },
+
+  // ── Bioderma Sensibio H2O — minimalist micellar; broad agreement, clean ────
+  { listingId: 'l-bio-ewg', productId: 'prod-bioderma-sensibio', sourceId: 'ewg', scoreRaw: 1, scoreLabel: 'Low concern' },
+  { listingId: 'l-bio-yuka', productId: 'prod-bioderma-sensibio', sourceId: 'yuka', scoreRaw: 90, scoreLabel: 'Excellent' },
+  { listingId: 'l-bio-inci', productId: 'prod-bioderma-sensibio', sourceId: 'inci-beauty', scoreRaw: 18 },
+  { listingId: 'l-bio-eco', productId: 'prod-bioderma-sensibio', sourceId: 'obf-eco', scoreRaw: 62 },
+  { listingId: 'l-bio-labor', productId: 'prod-bioderma-sensibio', sourceId: 'good-on-you', scoreRaw: 3 },
+  { listingId: 'l-bio-pkg', productId: 'prod-bioderma-sensibio', sourceId: 'how2recycle', scoreRaw: 46 },
+
+  // ── COSRX Snail 96 Essence — K-beauty cult favorite; clean, high agreement ─
+  { listingId: 'l-cos-ewg', productId: 'prod-cosrx-snail', sourceId: 'ewg', scoreRaw: 2, scoreLabel: 'Low concern' },
+  { listingId: 'l-cos-yuka', productId: 'prod-cosrx-snail', sourceId: 'yuka', scoreRaw: 88, scoreLabel: 'Excellent' },
+  { listingId: 'l-cos-inci', productId: 'prod-cosrx-snail', sourceId: 'inci-beauty', scoreRaw: 17 },
+  { listingId: 'l-cos-eco', productId: 'prod-cosrx-snail', sourceId: 'obf-eco', scoreRaw: 58 },
+  { listingId: 'l-cos-labor', productId: 'prod-cosrx-snail', sourceId: 'good-on-you', scoreRaw: 3 },
+  { listingId: 'l-cos-pkg', productId: 'prod-cosrx-snail', sourceId: 'how2recycle', scoreRaw: 52 },
+
+  // ── Fenty Pro Filt'r Foundation — silicones + fragrance split safety raters ─
+  { listingId: 'l-fen-ewg', productId: 'prod-fenty-filtr', sourceId: 'ewg', scoreRaw: 5, scoreLabel: 'Moderate concern' },
+  { listingId: 'l-fen-yuka', productId: 'prod-fenty-filtr', sourceId: 'yuka', scoreRaw: 62, scoreLabel: 'Fair' },
+  { listingId: 'l-fen-inci', productId: 'prod-fenty-filtr', sourceId: 'inci-beauty', scoreRaw: 10 },
+  { listingId: 'l-fen-eco', productId: 'prod-fenty-filtr', sourceId: 'obf-eco', scoreRaw: 44 },
+  // Fenty is a strong inclusivity/ethics story; labor rates well
+  { listingId: 'l-fen-labor', productId: 'prod-fenty-filtr', sourceId: 'good-on-you', scoreRaw: 4 },
+  { listingId: 'l-fen-pkg', productId: 'prod-fenty-filtr', sourceId: 'how2recycle', scoreRaw: 42 },
 ];
 
 export const LISTINGS: Listing[] = SEED.map((s) => {
@@ -955,6 +1190,119 @@ export const INGREDIENT_FLAGS: IngredientFlag[] = [
     notes: [
       { label: 'Banned: Hawaii, US Virgin Islands, Palau', band: 'bad' },
       { label: 'FDA + EU approved', band: 'good' },
+    ],
+  },
+
+  {
+    productId: 'prod-paulas-bha',
+    slug: 'salicylic-acid',
+    name: 'Salicylic Acid',
+    explanation:
+      'A beta-hydroxy acid (BHA) that exfoliates inside the pore. Highly effective for blackheads and oily skin, but it is a recognized irritant and the active that drives this product\'s whole rating split.',
+    positions: [
+      {
+        sourceId: 'ewg',
+        sourceName: 'EWG Skin Deep',
+        fundingModel: 'nonprofit',
+        stance: 'caution',
+        reasoning:
+          'Flags skin irritation and use-restriction concerns; advises against use during pregnancy and on broken skin.',
+      },
+      {
+        sourceId: 'yuka',
+        sourceName: 'Yuka',
+        fundingModel: 'subscription',
+        stance: 'safe',
+        reasoning:
+          'Recognized exfoliating active within regulated leave-on limits (2%); rated low risk at this concentration.',
+      },
+      {
+        sourceId: 'inci-beauty',
+        sourceName: 'INCI Beauty',
+        fundingModel: 'ad_supported',
+        stance: 'caution',
+        reasoning:
+          'Effective but capped under EU rules; listed as "to monitor" with usage and concentration limits.',
+      },
+    ],
+    notes: [
+      { label: 'Avoid in pregnancy', band: 'poor' },
+      { label: 'EU concentration capped at 2%', band: 'good' },
+    ],
+  },
+
+  {
+    productId: 'prod-native-deo',
+    slug: 'sodium-bicarbonate',
+    name: 'Sodium Bicarbonate (Baking Soda)',
+    explanation:
+      'The odor-neutralizer in many aluminum-free deodorants. Effective and food-grade safe, but its alkaline pH is the single most common cause of underarm irritation in natural deodorants — the trade for going aluminum-free.',
+    positions: [
+      {
+        sourceId: 'ewg',
+        sourceName: 'EWG Skin Deep',
+        fundingModel: 'nonprofit',
+        stance: 'safe',
+        reasoning:
+          'Rated low hazard; a well-characterized ingredient with no toxicity or bioaccumulation concerns.',
+      },
+      {
+        sourceId: 'yuka',
+        sourceName: 'Yuka',
+        fundingModel: 'subscription',
+        stance: 'caution',
+        reasoning:
+          'Generally safe, but flags pH-driven irritation risk on sensitive underarm skin with daily use.',
+      },
+      {
+        sourceId: 'inci-beauty',
+        sourceName: 'INCI Beauty',
+        fundingModel: 'ad_supported',
+        stance: 'safe',
+        reasoning: 'Listed as a satisfactory buffering/odor-control ingredient; no usage restriction.',
+      },
+    ],
+    notes: [
+      { label: 'Aluminum-free trade-off', band: 'good' },
+      { label: 'Can irritate sensitive skin', band: 'fair' },
+    ],
+  },
+
+  {
+    productId: 'prod-ogx-argan',
+    slug: 'methylisothiazolinone',
+    name: 'Methylisothiazolinone (MIT)',
+    explanation:
+      'A potent preservative in rinse-off products. Highly effective against microbes, but a leading cause of contact allergy — it was named Allergen of the Year (2013) and is heavily restricted in leave-on products.',
+    positions: [
+      {
+        sourceId: 'ewg',
+        sourceName: 'EWG Skin Deep',
+        fundingModel: 'nonprofit',
+        stance: 'concern',
+        reasoning:
+          'High concern for allergenicity and skin sensitization; one of the most common causes of cosmetic contact dermatitis.',
+      },
+      {
+        sourceId: 'yuka',
+        sourceName: 'Yuka',
+        fundingModel: 'subscription',
+        stance: 'caution',
+        reasoning:
+          'Flags allergen risk; permitted in rinse-off products under EU limits but recommends avoidance for reactive skin.',
+      },
+      {
+        sourceId: 'inci-beauty',
+        sourceName: 'INCI Beauty',
+        fundingModel: 'ad_supported',
+        stance: 'caution',
+        reasoning:
+          'Restricted to rinse-off use under EU rules; listed as a known sensitizer to monitor.',
+      },
+    ],
+    notes: [
+      { label: 'Allergen of the Year 2013', band: 'bad' },
+      { label: 'Banned in EU leave-on products', band: 'poor' },
     ],
   },
 ];
