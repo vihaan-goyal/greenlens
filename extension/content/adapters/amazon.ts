@@ -1,5 +1,6 @@
 import type { RawProductSighting } from '../../shared/sighting';
 import type { SiteAdapter } from './types';
+import { attr, clean, splitIngredients, text } from './dom';
 
 /**
  * Amazon product page adapter. The DOM here is *not* stable — Amazon ships
@@ -69,25 +70,8 @@ export const amazonAdapter: SiteAdapter = {
 };
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-
-function text(doc: Document, selectors: string[]): string | undefined {
-  for (const sel of selectors) {
-    const el = doc.querySelector(sel);
-    const t = el?.textContent?.trim();
-    if (t) return t;
-  }
-  return undefined;
-}
-
-function attr(doc: Document, selector: string, name: string): string | undefined {
-  const el = doc.querySelector(selector);
-  const v = el?.getAttribute(name) ?? undefined;
-  return v && v.trim() ? v.trim() : undefined;
-}
-
-function clean(s: string): string {
-  return s.replace(/\s+/g, ' ').trim();
-}
+// Generic DOM helpers (text/attr/clean/splitIngredients) live in ./dom and are
+// shared with the Sephora adapter. Everything below is Amazon-specific.
 
 /**
  * Brand extraction with a fallback cascade. Amazon ships several layouts;
@@ -215,19 +199,6 @@ function readIngredientContainer(el: Element): string[] {
       .flatMap((li) => splitIngredients(li.textContent ?? ''));
   }
   return splitIngredients(el.textContent ?? '');
-}
-
-function splitIngredients(raw: string): string[] {
-  // Split only on real separators. An earlier version also split on `)`
-  // followed by whitespace and an uppercase letter (for pages that omit
-  // commas between INCI names) — but that shreds inline parens like
-  // "Pyrus Malus (Apple) Fruit Extract" into two non-matching tokens, which
-  // broke the matcher on real brand pages.
-  return raw
-    .replace(/\s+/g, ' ')
-    .split(/[,•·]/)
-    .map((s) => s.trim().toLowerCase())
-    .filter((s) => s.length >= 2 && s.length <= 120);
 }
 
 /**

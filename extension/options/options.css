@@ -1,0 +1,141 @@
+html {
+  font-family: 'Manrope', ui-rounded, system-ui, -apple-system, sans-serif;
+  color: var(--ink);
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.gl-opt {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+/* ── header ──────────────────────────────────────────────────────────────── */
+.gl-opt-head {
+  margin-bottom: 28px;
+}
+.gl-opt-wordmark {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--ink);
+}
+.gl-opt-wordmark::first-letter { color: var(--accent-deep); }
+.gl-opt-tag {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 4px 0 0;
+}
+
+/* ── sections ────────────────────────────────────────────────────────────── */
+.gl-opt-section {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px 24px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-soft, 0 1px 2px rgba(46, 42, 34, 0.04));
+}
+.gl-opt-h2 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+  color: var(--ink);
+}
+.gl-opt-lead {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  margin: 0 0 18px;
+}
+
+/* ── weights ─────────────────────────────────────────────────────────────── */
+.gl-opt-weight { display: block; margin-bottom: 14px; }
+.gl-opt-weight-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-bottom: 5px;
+}
+.gl-opt-weight-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  font-weight: 600;
+}
+.gl-opt-weight input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent-deep);
+}
+.gl-opt-foot {
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  color: var(--ink-3);
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
+
+/* ── API endpoint ────────────────────────────────────────────────────────── */
+.gl-opt-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.gl-opt-input {
+  flex: 1 1 auto;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+}
+.gl-opt-input:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.gl-opt-saved {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-deep);
+  white-space: nowrap;
+}
+
+/* ── raters ──────────────────────────────────────────────────────────────── */
+.gl-opt-funding {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.gl-opt-funding-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.gl-opt-funding-row:first-child { border-top: none; }
+.gl-opt-funding-tag {
+  flex: 0 0 110px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.gl-opt-funding-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}

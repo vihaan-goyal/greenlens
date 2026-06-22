@@ -1,0 +1,48 @@
+<!doctype html>
+<!--
+  Trimmed snapshot of a Sephora product page (The Ordinary — Natural Moisturizing
+  Factors + HA). Only the structure the adapter reads is kept: the data-at test
+  hooks Sephora ships, a breadcrumb, the ingredients accordion, price, og:image,
+  and a Product ld+json block carrying a gtin13. When Sephora ships new DOM, add
+  a NEW fixture next to this one and watch the test fail before touching selectors.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta property="og:image" content="https://www.sephora.com/productimages/sku/s2330001-main.jpg" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "Natural Moisturizing Factors + HA",
+        "brand": { "@type": "Brand", "name": "The Ordinary" },
+        "sku": "2330001",
+        "gtin13": "0769915194302"
+      }
+    </script>
+  </head>
+  <body>
+    <nav>
+      <ol data-at="breadcrumb">
+        <li><a href="/">Home</a></li>
+        <li><a href="/shop/skincare">Skincare</a></li>
+        <li><a href="/shop/moisturizer">Moisturizers</a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <a data-at="brand_name" href="/brand/the-ordinary">The Ordinary</a>
+      <h1 data-at="product_name">Natural Moisturizing Factors + HA</h1>
+      <b data-at="price">$8.90</b>
+
+      <section>
+        <h2 data-at="ingredient_label">Ingredients</h2>
+        <div data-at="ingredients">
+          Aqua (Water), Caprylic/Capric Triglyceride, Cetyl Alcohol, Propanediol,
+          Stearyl Alcohol, Glycerin, Sodium Hyaluronate, Arginine, Sodium PCA,
+          PCA, Urea, Triethyl Citrate, Phenoxyethanol, Ethylhexylglycerin
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
