@@ -63,6 +63,9 @@ export function SiteHeader() {
           <NavLink href="/browse" active={onCatalog}>
             Catalog
           </NavLink>
+          <NavLink href="/disagreements" active={pathname === '/disagreements'}>
+            Where they disagree
+          </NavLink>
           <NavLink href="/#install" active={false}>
             Extension
           </NavLink>
