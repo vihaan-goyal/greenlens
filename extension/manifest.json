@@ -32,7 +32,8 @@
     {
       "matches": [
         "https://www.amazon.com/*",
-        "https://smile.amazon.com/*"
+        "https://smile.amazon.com/*",
+        "https://www.sephora.com/*"
       ],
       "js": ["content/index.ts"],
       "run_at": "document_idle"
@@ -42,6 +43,7 @@
   "host_permissions": [
     "https://www.amazon.com/*",
     "https://smile.amazon.com/*",
+    "https://www.sephora.com/*",
     "http://localhost/*",
     "http://127.0.0.1/*"
   ]

@@ -15,7 +15,9 @@ extension/
     index.ts                   per-page bootstrap; SPA-nav aware
     adapters/
       types.ts                 SiteAdapter contract
+      dom.ts                   generic text/attr/clean/splitIngredients helpers
       amazon.ts                /dp/ and /gp/product/ scraper
+      sephora.ts               /product/ scraper (data-at hooks + ld+json gtin)
       __fixtures__/*.html      saved page snapshots — fail-the-test-first
     card/
       mount.tsx                shadow-DOM root, tokens.css adopted inside
@@ -25,33 +27,23 @@ extension/
     sighting.ts                RawProductSighting type
     messages.ts                discriminated unions for both directions
   popup/                       toolbar popup (weight controls)
-  options/                     full options page (stub)
+  options/                     full options page (weights · API endpoint · raters)
 ```
 
 Shared domain code is imported from `@/lib/domain/*` — those modules stay
 pure and serve both the Next.js app and the extension.
 
-## Required dependencies (not yet installed)
+## Dependencies (installed)
 
-CLAUDE.md asks for confirmation before adding deps. To make this scaffold
-build and run, we need:
+The build deps are in `package.json`: `vite`, `@crxjs/vite-plugin`,
+`@vitejs/plugin-react`, `@types/chrome`, `jsdom` (vitest adapter tests), and
+`zod`. `react`/`react-dom` come from the web app.
 
-| dep                       | why                                          |
-| ------------------------- | -------------------------------------------- |
-| `vite`                    | bundler for the extension                    |
-| `@crxjs/vite-plugin`      | MV3 manifest + content-script HMR            |
-| `@vitejs/plugin-react`    | JSX for popup, options, card                 |
-| `@types/chrome`           | typed `chrome.runtime`/`chrome.storage` APIs |
-| `jsdom`                   | DOM for vitest adapter tests                 |
-| `zod`                     | already in the stack list; validate API payloads later |
-
-`react` and `react-dom` are already installed.
-
-## Build commands (to add to package.json once deps land)
+## Build commands
 
 ```
-"ext:dev":   "vite --config extension/vite.config.ts",
-"ext:build": "vite build --config extension/vite.config.ts",
+npm run ext:dev      # vite watch → unpacked extension in dist/extension/
+npm run ext:build    # production MV3 build
 ```
 
 `ext:dev` watches and outputs an unpacked extension to `dist/extension/`;
@@ -68,13 +60,22 @@ adapter has at least one fixture under `__fixtures__/`. When Amazon ships a
 new DOM, add a *new* fixture next to the existing one and watch it fail
 before touching selectors — that's how we keep the adapter honest.
 
+## Wired up (no longer pending)
+
+- The full `/lib/matcher` pipeline (blocking → features → clustering) runs in
+  the SW.
+- `/api/resolve` resolves sightings against the full Prisma catalog; the SW
+  hits it first and falls back to the bundled seed only when it's unreachable.
+- Both site adapters (Amazon, Sephora) with fixtures + tests.
+- Options page (per-axis weights, configurable API endpoint, rater funding
+  reference).
+- Sonion idle animation inside the shadow root — driven by CSS keyframes in
+  `content/card/card.css` (not Framer Motion), with a `prefers-reduced-motion`
+  guard.
+
 ## What is intentionally NOT here yet
 
-- `/lib/matcher` (blocking → features → clustering). The SW currently calls
-  `mockRepository.searchProducts(rawName)` as a stand-in.
-- Backend API (`/api/resolve`, `/api/product/[id]`).
-- `api-repository.ts` impl of `ProductRepository`.
-- FB Marketplace adapter + fixture.
-- Sonion idle/talk animations within the shadow root (the SVG renders; the
-  Framer Motion driver still needs to be wired).
-- Full popup (recent sightings list, per-source funding panel).
+- FB Marketplace adapter + fixture (the open adapter slot; weak cosmetics
+  signal — used listings rarely carry ingredients or a GTIN).
+- Sonion talk/nod animation inside the in-page card (the popup/web app have it).
+- Recent-sightings history in the popup.

@@ -7,6 +7,7 @@ import type { Brand, Weights } from '@/lib/domain/types';
 import type { ProductView } from '@/lib/data/repository';
 import { resolveItem, type CatalogEntry } from '@/lib/matcher/matcher';
 import type { MatchableItem } from '@/lib/matcher/features';
+import { API_BASE_KEY, normalizeApiBase } from '../shared/api';
 
 console.log('[greenlens/sw] build', __GL_BUILD__);
 
@@ -60,13 +61,10 @@ function viewToCatalog(v: ProductView): CatalogEntry {
 //      only when the API is unreachable, so Sonion still works on the curated
 //      demo brands with no server running.
 
-const DEFAULT_API_BASE = 'http://localhost:3000';
-const API_BASE_KEY = 'greenlens.apiBase';
-
 async function resolveApiUrl(): Promise<string> {
   const stored = await chrome.storage.local.get([API_BASE_KEY]);
-  const base = (stored[API_BASE_KEY] as string | undefined)?.trim() || DEFAULT_API_BASE;
-  return `${base.replace(/\/+$/, '')}/api/resolve`;
+  const base = normalizeApiBase((stored[API_BASE_KEY] as string | undefined) ?? '');
+  return `${base}/api/resolve`;
 }
 
 /**
@@ -201,7 +199,11 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== 'local' || !changes[WEIGHTS_KEY]) return;
   const weights = await readWeights();
   const matched = await chrome.tabs.query({
-    url: ['https://www.amazon.com/*', 'https://smile.amazon.com/*'],
+    url: [
+      'https://www.amazon.com/*',
+      'https://smile.amazon.com/*',
+      'https://www.sephora.com/*',
+    ],
   });
   for (const tab of matched) {
     if (tab.id === undefined) continue;
