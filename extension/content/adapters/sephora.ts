@@ -44,7 +44,7 @@ export const sephoraAdapter: SiteAdapter = {
     const category = breadcrumbs(doc);
     const rawIngredients = ingredients(doc);
     const rawGtin = gtinFromLdJson(doc);
-    const priceText = text(doc, ['[data-at="price"]', 'b[data-at="price"]', '.css-0 .css-price']);
+    const priceText = text(doc, ['[data-at="product_list_price"]', '[data-at="price"]']);
     const imageUrl = attr(doc, 'meta[property="og:image"]', 'content');
 
     const sighting: RawProductSighting = {
@@ -83,56 +83,84 @@ function readBrand(doc: Document): string | undefined {
 }
 
 /**
- * Breadcrumb trail (root → leaf). Sephora renders it as an ordered list of
- * links tagged `data-at="breadcrumb"`; we fall back to any `nav` breadcrumb
- * landmark. The leading "Sephora"/"Home" crumb, if present, is dropped so the
- * cosmetic classifier sees real category nodes ("Skincare", "Moisturizers").
+ * Breadcrumb trail (root → leaf). Sephora tags each crumb anchor individually
+ * with `data-at="pdp_bread_crumb"` (e.g. Skincare → Treatments → Face Serums);
+ * we fall back to a `nav`/BreadcrumbList list of links. The leading
+ * "Sephora"/"Home" crumb, if present, is dropped so the cosmetic classifier
+ * sees real category nodes — without one, a Sephora product never classifies
+ * as a cosmetic and the card never shows.
  */
 function breadcrumbs(doc: Document): string[] | undefined {
-  const containers = [
-    '[data-at="breadcrumb"]',
-    'nav[aria-label="Breadcrumb"]',
-    'ol[itemtype*="BreadcrumbList"]',
-  ];
-  for (const sel of containers) {
-    const root = doc.querySelector(sel);
-    if (!root) continue;
-    const crumbs = Array.from(root.querySelectorAll('a'))
-      .map((a) => a.textContent?.trim() ?? '')
-      .filter((s) => s.length > 0 && !/^(home|sephora)$/i.test(s));
+  const tagged = dedupe(
+    Array.from(doc.querySelectorAll('[data-at="pdp_bread_crumb"]'))
+      .map((el) => el.textContent?.trim() ?? '')
+      .filter((s) => s.length > 0 && !/^(home|sephora)$/i.test(s)),
+  );
+  if (tagged.length) return tagged;
+
+  for (const sel of [
+    'nav[aria-label*="readcrumb" i] a',
+    'ol[itemtype*="BreadcrumbList"] a',
+    'nav ol a',
+  ]) {
+    const crumbs = dedupe(
+      Array.from(doc.querySelectorAll(sel))
+        .map((a) => a.textContent?.trim() ?? '')
+        .filter((s) => s.length > 0 && !/^(home|sephora)$/i.test(s)),
+    );
     if (crumbs.length) return crumbs;
   }
   return undefined;
 }
 
+function dedupe(xs: string[]): string[] {
+  return [...new Set(xs)];
+}
+
 /**
- * Ingredients live behind the "Ingredients" accordion. Read the container
- * tagged `data-at="ingredients"` first; otherwise walk from an "Ingredients"
- * heading to the following block. Comma-split into INCI tokens.
+ * Ingredients live in the "Ingredients" accordion. Sephora tags only the
+ * *label* ("Ingredients"), not the list element — the INCI list is a plain
+ * comma-separated paragraph in the accordion panel with no stable hook. So we
+ * find the heading, then climb outward and read the comma-densest leaf: the
+ * INCI list is always the densest comma run in its panel, which survives
+ * Sephora's class/attr churn far better than a positional selector.
  */
 function ingredients(doc: Document): string[] {
-  const tagged = doc.querySelector('[data-at="ingredients"]');
-  if (tagged) {
-    const list = splitIngredients(tagged.textContent ?? '');
-    if (list.length) return list;
-  }
+  const heading = Array.from(
+    doc.querySelectorAll('h1, h2, h3, h4, h5, b, strong, [data-at="ingredients"]'),
+  ).find((el) => /^ingredients\b/i.test(el.textContent?.trim() ?? ''));
+  if (!heading) return [];
 
-  const headings = doc.querySelectorAll('h1, h2, h3, h4, h5, b, strong, [data-at="ingredient_label"]');
-  for (const h of Array.from(headings)) {
-    if (!/^ingredients\b/i.test(h.textContent?.trim() ?? '')) continue;
-    const sibling = h.nextElementSibling;
-    if (sibling) {
-      const list = splitIngredients(sibling.textContent ?? '');
-      if (list.length) return list;
+  let scope: Element | null = heading;
+  for (let i = 0; i < 5 && scope; i++) {
+    const leaf = commaRichestLeaf(scope, heading);
+    if (leaf) {
+      const list = splitIngredients(leaf.textContent ?? '');
+      // >2 tokens guards against prose ("light, fast-absorbing serum") being
+      // mistaken for an ingredient list.
+      if (list.length > 2) return list;
     }
-    const parent = h.parentElement;
-    if (parent) {
-      const stripped = parent.textContent?.replace(h.textContent ?? '', '') ?? '';
-      const list = splitIngredients(stripped);
-      if (list.length) return list;
-    }
+    scope = scope.parentElement;
   }
   return [];
+}
+
+/**
+ * The leaf element (no element children) with the most commas inside `root`,
+ * excluding `skip`. Returns null unless something beats a 3-comma floor.
+ */
+function commaRichestLeaf(root: Element, skip: Element): Element | null {
+  let best: Element | null = null;
+  let bestCommas = 3;
+  for (const el of Array.from(root.querySelectorAll('*'))) {
+    if (el.children.length > 0 || el === skip) continue;
+    const commas = (el.textContent?.match(/,/g) ?? []).length;
+    if (commas > bestCommas) {
+      bestCommas = commas;
+      best = el;
+    }
+  }
+  return best;
 }
 
 /**

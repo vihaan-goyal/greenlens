@@ -1,0 +1,38 @@
+<!doctype html>
+<!--
+  Trimmed REAL snapshot of a Sephora PDP (The Ordinary — Hyaluronic Acid 2% + B5
+  Hydrating Serum, P427419), captured 2026-06-22 via a headless browser. The
+  nodes below are the real elements (real data-at hooks, real classes, real
+  text) the adapter reads, lifted out of the full page.
+
+  Reality notes this fixture preserves:
+   - Sephora exposes NO Product ld+json and NO GTIN here → rawGtin is legitimately
+     undefined (the no-barcode tail the project surfaces rather than fakes).
+   - The price is a RANGE ("$6.00 - $10.80") because the product has multiple sizes.
+   - og:image is the Sephora logo fallback at capture time (the product image
+     lazy-loads), so imageUrl is display-only and not asserted strictly.
+   - The INCI list has no data-at hook — it's a plain <p> in the accordion panel.
+
+  When Sephora ships new DOM, capture a NEW fixture next to this one and watch the
+  test fail before touching selectors.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta property="og:image" content="/images/Sephora_logo.jpg" />
+  </head>
+  <body>
+    <nav aria-label="Breadcrumb">
+      <a data-at="pdp_bread_crumb" href="/shop/skincare" class="css-dh5g5v e15t7owz0" data-comp="BaseComponent ">Skincare</a>
+      <a data-at="pdp_bread_crumb" href="/shop/facial-treatments" class="css-dh5g5v e15t7owz0" data-comp="BaseComponent ">Treatments</a>
+      <a data-at="pdp_bread_crumb" href="/shop/face-serum" class="css-dh5g5v e15t7owz0" data-comp="BaseComponent ">Face Serums</a>
+    </nav>
+    <a data-at="brand_name" href="/brand/the-ordinary?icid2=product_link_brand" class="css-1a8e5pi e15t7owz0" data-comp="BaseComponent ">The Ordinary</a>
+    <span data-at="product_name" class="css-wkag1e e15t7owz0" data-comp="BaseComponent ">Hyaluronic Acid 2% + B5 Hydrating Serum with Ceramides</span>
+    <span data-at="product_list_price" class="css-0">$6.00 - $10.80</span>
+    <section data-comp="RegularProduct">
+      <button><h2>Ingredients</h2></button>
+      <div><div><p>Aqua (Water), Sodium Hyaluronate, Propanediol, Pentylene Glycol, Hydrolyzed Hyaluronic Acid, Sodium Hyaluronate Crosspolymer, Phospholipids, Sphingolipids, Panthenol, Ahnfeltiopsis Concinna Extract, Glycerin, Polysorbate 20, Citric Acid, Sodium Citrate, P-Anisic Acid, Tocopherol, Trisodium Ethylenediamine Disuccinate, Caprylyl Glycol, Ethoxydiglycol, Ethylhexylglycerin, Hexylene Glycol, Phenoxyethanol, Chlorphenesin.</p></div></div>
+    </section>
+  </body>
+</html>

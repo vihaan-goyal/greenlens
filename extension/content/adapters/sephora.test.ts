@@ -29,9 +29,9 @@ describe('sephoraAdapter.matches', () => {
   });
 });
 
-describe('sephoraAdapter.extract (The Ordinary fixture)', () => {
-  const doc = docFrom(fixture('sephora-the-ordinary-nmf.html'));
-  const url = 'https://www.sephora.com/product/the-ordinary-nmf-P453667';
+describe('sephoraAdapter.extract (real captured fixture — The Ordinary HA P427419)', () => {
+  const doc = docFrom(fixture('sephora-the-ordinary-hyaluronic-P427419.html'));
+  const url = 'https://www.sephora.com/product/the-ordinary-hyaluronic-acid-2-b5-hydrating-serum-P427419';
   const sighting = sephoraAdapter.extract(doc, url)!;
 
   it('returns a sighting', () => {
@@ -40,22 +40,22 @@ describe('sephoraAdapter.extract (The Ordinary fixture)', () => {
     expect(sighting.url).toBe(url);
   });
 
-  it('reads the product name from the data-at hook', () => {
-    expect(sighting.rawName).toBe('Natural Moisturizing Factors + HA');
+  it('reads the product name from data-at="product_name" (brand not doubled in)', () => {
+    expect(sighting.rawName).toBe('Hyaluronic Acid 2% + B5 Hydrating Serum with Ceramides');
   });
 
   it('reads the brand from data-at="brand_name"', () => {
     expect(sighting.rawBrand).toBe('The Ordinary');
   });
 
-  it('reads the breadcrumb, dropping the Home crumb', () => {
-    expect(sighting.category).toEqual(['Skincare', 'Moisturizers']);
+  it('reads the per-crumb data-at="pdp_bread_crumb" trail (so the classifier sees a category)', () => {
+    expect(sighting.category).toEqual(['Skincare', 'Treatments', 'Face Serums']);
   });
 
-  it('extracts ingredients as a lower-cased, comma-split list', () => {
-    expect(sighting.rawIngredients.length).toBeGreaterThan(10);
+  it('extracts the real INCI list as a lower-cased, comma-split list', () => {
+    expect(sighting.rawIngredients.length).toBe(23);
     expect(sighting.rawIngredients[0]).toBe('aqua (water)');
-    expect(sighting.rawIngredients).toContain('glycerin');
+    expect(sighting.rawIngredients).toContain('sodium hyaluronate');
     expect(sighting.rawIngredients).toContain('phenoxyethanol');
     // Inline parens must survive intact (regression guard from the Amazon adapter).
     for (const ing of sighting.rawIngredients) {
@@ -63,13 +63,12 @@ describe('sephoraAdapter.extract (The Ordinary fixture)', () => {
     }
   });
 
-  it('reads the gtin13 from the ld+json block', () => {
-    expect(sighting.rawGtin).toBe('0769915194302');
+  it('has no GTIN — Sephora publishes none here (the no-barcode tail)', () => {
+    expect(sighting.rawGtin).toBeUndefined();
   });
 
-  it('reads price and og:image when present', () => {
-    expect(sighting.priceText).toBe('$8.90');
-    expect(sighting.imageUrl).toMatch(/^https?:\/\//);
+  it('reads the price range as display text', () => {
+    expect(sighting.priceText).toBe('$6.00 - $10.80');
   });
 });
 
