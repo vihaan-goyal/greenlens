@@ -139,17 +139,22 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   async listProducts(): Promise<ProductView[]> {
-    // The browsable catalog is the curated set only (sortIndex < 1000) — parity
-    // with the mock repo's "On the shelf" list. The ~7k ingested OBF rows
-    // (sortIndex 1000, see persistIngestResult) exist for matching + search, not
-    // for the browse grid; listing them all here builds a view per product and,
-    // via buildShelfCatalog's per-product alternatives, goes O(N²) and hangs the
-    // page. They stay reachable through searchProducts.
-    // ponytail: hard cutoff at 1000; if curated ever exceeds it, switch to an
+    // Browse = curated set (sortIndex < 1000, mock parity) PLUS ingested OBF rows
+    // (sortIndex 1000) that carry at least one rating. An unrated ingested row is
+    // an empty shell with no verdict, so it stays out. `take` is the safety bound:
+    // buildShelfCatalog runs listAlternatives per returned product, so an
+    // unbounded list goes O(N²) and hangs the page.
+    // ponytail: take=200 caps it; if curated ever exceeds 200, switch to an
     // explicit `curated` flag column instead of the sortIndex convention.
     const ids = await prisma.product.findMany({
-      where: { sortIndex: { lt: 1000 } },
-      orderBy: { sortIndex: 'asc' },
+      where: {
+        OR: [
+          { sortIndex: { lt: 1000 } },
+          { matches: { some: { listing: { ratings: { some: {} } } } } },
+        ],
+      },
+      orderBy: { sortIndex: 'asc' }, // curated first, then ingested
+      take: 200,
       select: { id: true },
     });
     return this.buildViews(ids.map((p) => p.id));
