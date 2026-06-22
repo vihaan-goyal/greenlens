@@ -46,13 +46,15 @@ export function YourShelf({ catalog }: { catalog: ShelfCatalog }) {
   const clear = useShelf((s) => s.clear);
 
   if (!mounted) {
-    return <div className="min-h-[220px]" aria-hidden />;
+    return null;
   }
 
   const cards = ids.map((id) => catalog.products[id]).filter((c): c is ShelfCard => !!c);
 
+  // Empty shelf renders nothing — the browsable catalog below it is what a
+  // first-time visitor does instead, so there's no dead-end empty-state card.
   if (cards.length === 0) {
-    return <EmptyShelf catalog={catalog} />;
+    return null;
   }
 
   return (
@@ -240,47 +242,5 @@ function BranchNode({ card, branch }: { card: ShelfCard; branch: ShelfBranch }) 
 
       <span aria-hidden className="shrink-0 text-ink-3">›</span>
     </Link>
-  );
-}
-
-/* ─── empty shelf ────────────────────────────────────────────────────────── */
-function EmptyShelf({ catalog }: { catalog: ShelfCatalog }) {
-  const suggestions = Object.values(catalog.products).slice(0, 4);
-  return (
-    <div>
-      <h2 className="mb-3 font-display text-[22px] font-semibold leading-none text-ink md:text-[26px]">
-        On <span className="italic" style={{ color: 'var(--accent-deep)' }}>your</span> shelf
-      </h2>
-      <div
-        className="relative overflow-hidden rounded-card bg-card px-5 py-7 shadow-card halo-tr"
-        style={{ border: '1px solid var(--line)', ['--halo' as string]: 'var(--halo-leaf)' }}
-      >
-        <p className="halo-content font-display text-[18px] italic text-ink">Your shelf is empty.</p>
-        <p className="halo-content mt-1 max-w-md text-[12.5px] leading-relaxed text-ink-2">
-          Search a product above — anything you look up lands here, with cleaner
-          alternatives branching off it. Remove any item anytime.
-        </p>
-
-        {suggestions.length > 0 && (
-          <div className="halo-content mt-4">
-            <p className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-ink-3">
-              not sure where to start?
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {suggestions.map((s) => (
-                <Link
-                  key={s.id}
-                  href={`/product/${s.id}`}
-                  className="rounded-pill px-3 py-1.5 text-[11px] font-medium text-ink transition hover:shadow-card"
-                  style={{ background: 'var(--card-2)', border: '1px solid var(--line)' }}
-                >
-                  {s.displayName}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
   );
 }

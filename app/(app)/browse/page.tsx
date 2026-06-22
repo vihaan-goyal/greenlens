@@ -1,26 +1,35 @@
 import Link from 'next/link';
 import { repository } from '@/lib/data';
 import { buildShelfCatalog } from '@/lib/shelf-catalog';
-import { MiniRaterSpread } from '@/components/MiniRaterSpread';
+import type { ProductView } from '@/lib/data/repository';
 import { Sonion } from '@/components/Sonion';
-import { BrandMark } from '@/components/BrandMark';
-import { ScoreDial } from '@/components/ScoreDial';
 import { YourShelf } from '@/components/YourShelf';
-import { AXES } from '@/lib/domain/types';
-import { VERDICT_VAR, verdictBand } from '@/lib/domain/verdict';
+import { ProductCard, meanOfPillars } from '@/components/ProductCard';
+import { detectDisagreements } from '@/lib/domain/disagreement';
+import { VERDICT_VAR } from '@/lib/domain/verdict';
+
+type SortKey = 'contested' | 'best' | 'worst' | 'name';
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: 'contested', label: 'Most contested' },
+  { key: 'best', label: 'Best overall' },
+  { key: 'worst', label: 'Worst overall' },
+  { key: 'name', label: 'A–Z' },
+];
 
 interface HomeProps {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; sort?: string }>;
 }
 
 export default async function HomePage({ searchParams }: HomeProps) {
-  const { q } = await searchParams;
-  const query = q?.trim() ?? '';
+  const sp = await searchParams;
+  const query = sp.q?.trim() ?? '';
   // With a query → live search results (server-rendered grid).
-  // Without → "your shelf": persisted look-up history, rendered client-side
-  // from this lookup table so it can read localStorage and stay removable.
+  // Without → the browsable catalog: a "your shelf" strip (persisted look-up
+  // history, client-rendered) on top of the full catalog grid, which is the
+  // thing you actually do when your shelf is empty.
   const results = query ? await repository.searchProducts(query) : [];
   const catalog = query ? null : await buildShelfCatalog();
+  const allProducts = query ? [] : await repository.listProducts();
 
   return (
     <main className="relative pb-4">
@@ -132,117 +141,166 @@ export default async function HomePage({ searchParams }: HomeProps) {
         </div>
       </section>
 
-      {/* ─── FEED: search results, or your shelf ────────────────────────── */}
-      <section className="mt-8">
-        {!query && catalog ? (
-          <YourShelf catalog={catalog} />
-        ) : (
-          <>
-        <div className="mb-3 flex items-baseline justify-between border-b pb-2" style={{ borderColor: 'var(--line)' }}>
-          <h2 className="font-display text-[22px] font-semibold leading-none text-ink md:text-[26px]">
-            Results <span className="italic text-ink-2">for</span>{' '}
-            <span style={{ color: 'var(--accent-deep)' }}>“{query}”</span>
-          </h2>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-3">
-            {results.length} {results.length === 1 ? 'match' : 'matches'}
-          </span>
-        </div>
-
-        {results.length === 0 ? (
-          <div className="relative overflow-hidden rounded-card bg-card px-5 py-7 text-sm text-ink-2 shadow-card halo-tr"
-               style={{ border: '1px solid var(--line)', ['--halo' as string]: 'var(--halo-amber)' }}>
-            <p className="halo-content font-display italic">Nothing matched yet.</p>
-            <p className="halo-content mt-1 text-[12px]">
-              The catalog is small until Open Beauty Facts ingestion lands.
-            </p>
+      {/* ─── FEED: search results, or the browsable catalog ─────────────── */}
+      {query ? (
+        <section className="mt-8">
+          <div className="mb-3 flex items-baseline justify-between border-b pb-2" style={{ borderColor: 'var(--line)' }}>
+            <h2 className="font-display text-[22px] font-semibold leading-none text-ink md:text-[26px]">
+              Results <span className="italic text-ink-2">for</span>{' '}
+              <span style={{ color: 'var(--accent-deep)' }}>“{query}”</span>
+            </h2>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-3">
+              {results.length} {results.length === 1 ? 'match' : 'matches'}
+            </span>
           </div>
-        ) : (
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {results.map(({ product, brand, pillars }, i) => {
-              const reps = AXES.map((a) => pillars[a].representative).filter(
-                (r): r is number => r !== null,
-              );
-              const mean = reps.length ? reps.reduce((a, b) => a + b, 0) / reps.length : null;
-              const band = verdictBand(mean);
-              const color = band ? VERDICT_VAR[band] : 'var(--ink-3)';
-              const haloVar =
-                band === 'excellent' || band === 'good'
-                  ? 'var(--halo-leaf)'
-                  : band === 'fair'
-                    ? 'var(--halo-amber)'
-                    : 'var(--halo-clay)';
 
-              return (
-                <li key={product.id} className="h-full anim-rise" style={{ animationDelay: `${Math.min(220 + i * 55, 760)}ms` }}>
-                  <Link
-                    href={`/product/${product.id}`}
-                    className="relative flex h-full flex-col overflow-hidden rounded-card bg-card shadow-card transition hover:shadow-lift halo-br"
-                    style={{
-                      border: '1px solid var(--line)',
-                      ['--halo' as string]: haloVar,
-                    }}
-                  >
-                    <div className="halo-content flex flex-1 items-stretch gap-3 p-3.5">
-                      {/* Score dial */}
-                      <div
-                        className="relative flex shrink-0 flex-col items-center justify-center rounded-2xl px-3 py-2"
-                        style={{
-                          background: 'var(--card-2)',
-                          border: `1px solid var(--line-soft)`,
-                        }}
-                      >
-                        <ScoreDial pillars={pillars} size={68} />
-                      </div>
-
-                      {/* Product info */}
-                      <div className="flex min-w-0 flex-1 flex-col justify-between gap-1.5">
-                        <div className="flex items-center gap-2">
-                          <BrandMark name={brand.name} size={28} accent={color} />
-                          <span className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3">
-                            {brand.name}
-                          </span>
-                        </div>
-                        <p className="font-display text-[16px] font-semibold leading-tight text-ink line-clamp-2">
-                          {product.displayName}
-                        </p>
-                        <div className="flex items-center justify-between gap-2 text-[10px] text-ink-3">
-                          <span className="uppercase tracking-[0.10em]">
-                            {product.category} · {product.sizeValue}
-                            {product.sizeUnit}
-                          </span>
-                          <span
-                            className="rounded-pill px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] shadow-card"
-                            style={{
-                              color: 'var(--card)',
-                              background: color,
-                            }}
-                          >
-                            {band ?? 'no data'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Mini rater spread — pinned to the bottom edge */}
-                    <div
-                      className="halo-content px-3.5 pb-3"
-                      style={{ borderTop: '1px dashed var(--line-soft)' }}
-                    >
-                      <div className="pt-3">
-                        <MiniRaterSpread pillars={pillars} />
-                      </div>
-                    </div>
-                  </Link>
+          {results.length === 0 ? (
+            <div className="relative overflow-hidden rounded-card bg-card px-5 py-7 text-sm text-ink-2 shadow-card halo-tr"
+                 style={{ border: '1px solid var(--line)', ['--halo' as string]: 'var(--halo-amber)' }}>
+              <p className="halo-content font-display italic">Nothing matched yet.</p>
+              <p className="halo-content mt-1 text-[12px]">
+                The catalog is small until Open Beauty Facts ingestion lands.
+              </p>
+            </div>
+          ) : (
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {results.map((view, i) => (
+                <li key={view.product.id} className="h-full">
+                  <ProductCard view={view} animationDelay={Math.min(220 + i * 55, 760)} />
                 </li>
-              );
-            })}
-          </ul>
-        )}
-          </>
-        )}
-      </section>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : (
+        <>
+          {catalog && (
+            <section className="mt-8">
+              <YourShelf catalog={catalog} />
+            </section>
+          )}
+          <CatalogBrowser
+            products={allProducts}
+            category={sp.category ?? 'all'}
+            sort={(sp.sort as SortKey) ?? 'contested'}
+          />
+        </>
+      )}
       </div>
     </main>
+  );
+}
+
+/* ─── The browsable catalog: category chips + sort + grid ────────────────── */
+function maxSpread(view: ProductView): number {
+  const ds = detectDisagreements(view.pillars);
+  return ds.length ? Math.max(...ds.map((d) => d.spread)) : 0;
+}
+
+function CatalogBrowser({
+  products,
+  category,
+  sort,
+}: {
+  products: ProductView[];
+  category: string;
+  sort: SortKey;
+}) {
+  // Distinct categories, alphabetized, for the filter chips.
+  const categories = Array.from(new Set(products.map((p) => p.product.category))).sort();
+
+  const filtered =
+    category === 'all'
+      ? products
+      : products.filter((p) => p.product.category === category);
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === 'name') return a.product.displayName.localeCompare(b.product.displayName);
+    if (sort === 'contested') return maxSpread(b) - maxSpread(a);
+    // best / worst — by equal-weight mean, unrated products sink to the bottom.
+    const ma = meanOfPillars(a.pillars);
+    const mb = meanOfPillars(b.pillars);
+    if (ma === null && mb === null) return 0;
+    if (ma === null) return 1;
+    if (mb === null) return -1;
+    return sort === 'best' ? mb - ma : ma - mb;
+  });
+
+  // Build hrefs that preserve the other facet.
+  const catHref = (c: string) =>
+    `/browse?${new URLSearchParams({ ...(c !== 'all' ? { category: c } : {}), sort }).toString()}`;
+  const sortHref = (s: SortKey) =>
+    `/browse?${new URLSearchParams({ ...(category !== 'all' ? { category } : {}), sort: s }).toString()}`;
+
+  return (
+    <section className="mt-10">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b pb-2" style={{ borderColor: 'var(--line)' }}>
+        <h2 className="font-display text-[22px] font-semibold leading-none text-ink md:text-[26px]">
+          Browse the <span className="italic" style={{ color: 'var(--accent-deep)' }}>catalog</span>
+        </h2>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-3">
+          {sorted.length} {sorted.length === 1 ? 'product' : 'products'}
+        </span>
+      </div>
+
+      {/* Controls: category chips + sort */}
+      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap gap-1.5">
+          <FacetChip href={catHref('all')} active={category === 'all'}>All</FacetChip>
+          {categories.map((c) => (
+            <FacetChip key={c} href={catHref(c)} active={category === c}>
+              {c}
+            </FacetChip>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-ink-3">Sort</span>
+          {SORTS.map((s) => (
+            <FacetChip key={s.key} href={sortHref(s.key)} active={sort === s.key}>
+              {s.label}
+            </FacetChip>
+          ))}
+        </div>
+      </div>
+
+      {sorted.length === 0 ? (
+        <p className="rounded-card bg-card px-5 py-7 text-sm text-ink-2" style={{ border: '1px solid var(--line)' }}>
+          Nothing in this category yet.
+        </p>
+      ) : (
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {sorted.map((view, i) => (
+            <li key={view.product.id} className="h-full">
+              <ProductCard view={view} animationDelay={Math.min(120 + i * 45, 620)} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function FacetChip({
+  href,
+  active,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-pill px-3 py-1.5 text-[11px] font-semibold capitalize transition"
+      style={{
+        color: active ? 'var(--ink)' : 'var(--ink-2)',
+        background: active ? 'var(--card)' : 'transparent',
+        border: active ? '1px solid var(--line)' : '1px solid transparent',
+      }}
+    >
+      {children}
+    </Link>
   );
 }
 

@@ -139,8 +139,16 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   async listProducts(): Promise<ProductView[]> {
-    // Curated order so this matches the mock repository's "On the shelf" list.
+    // The browsable catalog is the curated set only (sortIndex < 1000) — parity
+    // with the mock repo's "On the shelf" list. The ~7k ingested OBF rows
+    // (sortIndex 1000, see persistIngestResult) exist for matching + search, not
+    // for the browse grid; listing them all here builds a view per product and,
+    // via buildShelfCatalog's per-product alternatives, goes O(N²) and hangs the
+    // page. They stay reachable through searchProducts.
+    // ponytail: hard cutoff at 1000; if curated ever exceeds it, switch to an
+    // explicit `curated` flag column instead of the sortIndex convention.
     const ids = await prisma.product.findMany({
+      where: { sortIndex: { lt: 1000 } },
       orderBy: { sortIndex: 'asc' },
       select: { id: true },
     });
