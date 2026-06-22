@@ -14,7 +14,8 @@
 //
 // Run (needs DATABASE_URL from .env, and the .ts resolution hook):
 //   npm run db:ingest -- 301871239019 3600542525237        # specific barcodes
-//   npm run db:ingest -- --search "serum" --limit 2000      # bulk by search term
+//   npm run db:ingest -- --search "mascara" --limit 2000    # bulk by free-text (CGI)
+//   npm run db:ingest -- --filter categories_tags_en=shampoos --limit 2000  # bulk by category
 //   npm run db:ingest -- --packaging --limit 5000           # bulk, packaging-dense
 //   npm run db:ingest -- --packaging --page-start 21 --limit 8000  # resume past an earlier run
 //   npm run db:ingest -- --filter states_tags=en:packaging-completed --limit 3000
@@ -35,7 +36,12 @@ import {
 import { prismaRepository } from '../lib/data/prisma-repository';
 import { prisma } from '../lib/data/prisma';
 
+// Two endpoints, each honors a different knob: the v2 /search API filters on tag
+// params (categories_tags_en=…) but *ignores* free-text search_terms (returns the
+// whole DB). The legacy CGI endpoint is the reverse — it does real full-text. So
+// --search routes to CGI, --filter to v2.
 const OBF_SEARCH = 'https://world.openbeautyfacts.org/api/v2/search';
+const OBF_TEXT_SEARCH = 'https://world.openbeautyfacts.org/cgi/search.pl';
 const USER_AGENT = 'Greenlens/0.1 (ingest script; https://github.com/greenlens)';
 const REQUEST_SPACING_MS = 250;
 const MAX_PAGE_SIZE = 100; // OBF caps search pages at 100.
@@ -107,12 +113,27 @@ async function searchPage(
   pageSize: number,
 ): Promise<{ products: ObfProduct[]; pageCount: number; invalid: number }> {
   const params = new URLSearchParams({ fields: SEARCH_FIELDS, page_size: String(pageSize), page: String(page) });
-  if (term) params.set('search_terms', term);
-  for (const [k, v] of filters) params.set(k, v);
+  let url: string;
+  if (term) {
+    // Free-text → legacy CGI (v2 ignores search_terms). --filter tags don't
+    // carry over to CGI's tagtype_N form; the caller is warned at startup.
+    params.set('search_terms', term);
+    params.set('search_simple', '1');
+    params.set('action', 'process');
+    params.set('json', '1');
+    url = `${OBF_TEXT_SEARCH}?${params}`;
+  } else {
+    for (const [k, v] of filters) params.set(k, v);
+    url = `${OBF_SEARCH}?${params}`;
+  }
 
-  const res = await politeFetch(`${OBF_SEARCH}?${params}`);
+  const res = await politeFetch(url);
   if (!res.ok) throw new Error(`OBF search failed: ${res.status}`);
-  const json = (await res.json()) as { products?: unknown[]; page_count?: number };
+  const json = (await res.json()) as { products?: unknown[]; page_count?: number; count?: number; page_size?: number };
+  // CGI returns `count`+`page_size` but not always `page_count`; derive it so the
+  // "ran out of pages" stop and the progress heartbeat still work.
+  const pageCount =
+    json.page_count ?? (json.count && json.page_size ? Math.ceil(json.count / json.page_size) : 0);
 
   const products: ObfProduct[] = [];
   let invalid = 0;
@@ -123,7 +144,7 @@ async function searchPage(
     if (parsed.success) products.push(parsed.data);
     else invalid++;
   }
-  return { products, pageCount: json.page_count ?? 0, invalid };
+  return { products, pageCount, invalid };
 }
 
 interface Summary {
@@ -139,6 +160,12 @@ interface Summary {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const bulk = args.search !== null || args.filters.length > 0 || args.barcodes.length === 0;
+
+  // --search and --filter hit different endpoints; CGI text search ignores tag
+  // filters, so warn rather than silently dropping them.
+  if (args.search !== null && args.filters.length > 0) {
+    console.warn('  ⚠  --filter is ignored when --search is set (free-text uses the CGI endpoint).');
+  }
 
   // Load the canonical catalog once; extend it in memory as we mint products so
   // later items in this run can match products created earlier — no DB round-trip.
