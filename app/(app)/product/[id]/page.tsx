@@ -17,6 +17,17 @@ interface ProductPageProps {
   params: Promise<{ id: string }>;
 }
 
+/**
+ * Product detail. Laid out as a real website page rather than a phone column:
+ * a full-width title band, then a two-column body — the long "receipts" read down
+ * the main column while a **sticky scorecard** (the reactive ring + pillar bars +
+ * Sonion + quick exits) stays pinned on the right as you scroll. Sliding the
+ * weight controls in the main column visibly moves the ring in the sidebar, which
+ * makes the "you own the weighting" thesis tangible.
+ *
+ * On narrow screens it collapses to one column with the scorecard on top, so the
+ * verdict is the first thing you see.
+ */
 export default async function ProductPage({ params }: ProductPageProps) {
   const { id } = await params;
   const view = await repository.getProduct(id);
@@ -27,269 +38,290 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const alternatives = await repository.listAlternatives(product.id);
 
   return (
-    <main className="relative mx-auto w-full max-w-xl px-5 pt-3 pb-12 md:px-6 md:pt-6">
+    <main className="relative mx-auto w-full max-w-6xl px-5 pt-5 pb-4 md:px-8 md:pt-7">
       {/* Records this look-up onto "your shelf" (client-side, localStorage). */}
       <RecordView id={product.id} />
-      {/* Back chip */}
-      <nav className="mb-3">
-        <Link
-          href="/browse"
-          className="inline-flex items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-ink-2"
-          style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
-        >
-          <span>←</span> back
-        </Link>
+
+      {/* ─── BREADCRUMB ─────────────────────────────────────────────────── */}
+      <nav className="mb-4 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+        <Link href="/browse" className="hover:text-ink">Catalog</Link>
+        <span aria-hidden>/</span>
+        <span className="text-ink-2">{brand.name}</span>
+        <span aria-hidden>/</span>
+        <span className="truncate text-ink">{product.displayName}</span>
       </nav>
 
-      {/* ─── HERO ───────────────────────────────────────────────────────── */}
-      <section className="relative mb-5 overflow-hidden rounded-card halo-tr anim-rise"
+      {/* ─── TITLE BAND ─────────────────────────────────────────────────── */}
+      <header
+        className="relative overflow-hidden rounded-card halo-tr anim-rise"
         style={{
           background: 'var(--card)',
           border: '1px solid var(--line)',
           ['--halo' as string]: 'var(--halo-leaf)',
         }}
       >
-        <div className="halo-content p-5">
-          <div className="flex items-center gap-2.5">
-            <BrandMark name={brand.name} size={38} accent="var(--accent-deep)" />
+        <div className="halo-content flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between md:p-6">
+          <div className="flex items-center gap-3.5">
+            <BrandMark name={brand.name} size={46} accent="var(--accent-deep)" />
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-3">
                 {brand.name}
               </p>
-              <p className="font-display text-[20px] font-semibold leading-tight text-ink line-clamp-2">
+              <h1 className="font-display text-[24px] font-semibold leading-tight text-ink md:text-[30px]">
                 {product.displayName}
-              </p>
+              </h1>
             </div>
           </div>
-
-          <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-ink-3">
-            {product.category} · {product.sizeValue}
-            {product.sizeUnit}
-            {product.gtin && <span> · GTIN {product.gtin}</span>}
-          </p>
-
-          {/* Ring centerpiece */}
-          <div className="relative mt-4 flex flex-col items-center justify-center">
-            <ScoreRing pillars={pillars} size={252} thickness={16} />
-          </div>
-
-          {/* Pillar bars under the dial */}
-          <div className="mt-2 px-1">
-            <PillarBars pillars={pillars} height={120} />
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Meta>{product.category}</Meta>
+            <Meta>
+              {product.sizeValue}
+              {product.sizeUnit}
+            </Meta>
+            {product.gtin && <Meta>GTIN {product.gtin}</Meta>}
           </div>
         </div>
-      </section>
+      </header>
 
-      {/* ─── DISAGREEMENT CALLOUT ──────────────────────────────────────── */}
-      <section className="mb-5 anim-rise" style={{ animationDelay: '120ms' }}>
-        <DisagreementCallout pillars={pillars} />
-      </section>
-
-      {/* ─── ALTERNATIVES + FLAGS TILES ────────────────────────────────── */}
-      <section className="mb-5 grid grid-cols-2 gap-3 anim-rise" style={{ animationDelay: '180ms' }}>
-        {alternatives.length > 0 ? (
-          <Link
-            href={`/product/${product.id}/alternatives`}
-            className="relative overflow-hidden rounded-card p-3.5 halo-bl"
-            style={{
-              background: 'var(--card)',
-              border: '1px solid var(--line)',
-              ['--halo' as string]: 'var(--halo-leaf)',
-            }}
-          >
-            <div className="halo-content">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--verdict-excellent)' }}>
-                Cleaner options
-              </p>
-              <p className="mt-1 font-display text-[18px] font-semibold leading-none text-ink">
-                {alternatives.length}{' '}
-                <span className="italic font-medium text-ink-2">found</span>
-              </p>
-              <p className="mt-2 text-[10.5px] leading-snug text-ink-2">
-                Ranked by ingredient safety. Tradeoffs named for each.
-              </p>
-              <span className="mt-3 inline-block text-[11px] font-semibold" style={{ color: 'var(--accent-deep)' }}>
-                See better →
-              </span>
+      {/* ─── TWO-COLUMN BODY ────────────────────────────────────────────── */}
+      <div className="mt-6 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8">
+        {/* ── SCORECARD (right on desktop, top on mobile) ──────────────── */}
+        <aside className="lg:order-2 lg:sticky lg:top-[88px]">
+          <div className="space-y-4 anim-rise" style={{ animationDelay: '80ms' }}>
+            <div
+              className="relative overflow-hidden rounded-card halo-br"
+              style={{
+                background: 'var(--card)',
+                border: '1px solid var(--line)',
+                ['--halo' as string]: 'var(--halo-leaf)',
+              }}
+            >
+              <div className="halo-content p-4">
+                <p className="mb-1 text-center text-[10px] font-bold uppercase tracking-[0.22em] text-ink-3">
+                  Your composite
+                </p>
+                <div className="flex flex-col items-center">
+                  <ScoreRing pillars={pillars} size={236} thickness={15} />
+                </div>
+                <div className="mt-3 border-t pt-3" style={{ borderColor: 'var(--line-soft)' }}>
+                  <PillarBars pillars={pillars} height={108} />
+                </div>
+              </div>
             </div>
-          </Link>
-        ) : (
-          <div
-            className="rounded-card p-3.5"
-            style={{ background: 'var(--card-2)', border: '1px solid var(--line)' }}
-          >
-            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-ink-3">
-              Alternatives
-            </p>
-            <p className="mt-1 font-display text-[16px] font-semibold leading-tight text-ink">
-              Nothing beats this on safety.
-            </p>
-          </div>
-        )}
 
-        {flags.length > 0 ? (
-          <Link
-            href={`/product/${product.id}/flag/${flags[0]!.slug}`}
-            className="relative overflow-hidden rounded-card p-3.5 halo-br"
-            style={{
-              background: 'var(--card)',
-              border: '1px solid var(--line)',
-              ['--halo' as string]: 'var(--halo-clay)',
-            }}
-          >
-            <div className="halo-content">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--verdict-poor)' }}>
-                Flagged
-              </p>
-              <p className="mt-1 font-display text-[18px] font-semibold leading-none text-ink">
-                {flags.length}{' '}
-                <span className="italic font-medium text-ink-2">
-                  {flags.length === 1 ? 'ingredient' : 'ingredients'}
-                </span>
-              </p>
-              <p className="mt-2 text-[10.5px] leading-snug text-ink-2">
-                Where raters split on the chemistry.
-              </p>
-              <span className="mt-3 inline-block text-[11px] font-semibold" style={{ color: 'var(--accent-deep)' }}>
-                What's flagged →
-              </span>
+            {/* Quick exits — the two CLAUDE.md actions, always reachable. */}
+            <div className="grid grid-cols-2 gap-3">
+              {alternatives.length > 0 ? (
+                <QuickTile
+                  href={`/product/${product.id}/alternatives`}
+                  kicker="Cleaner options"
+                  kickerColor="var(--verdict-excellent)"
+                  count={alternatives.length}
+                  label="found"
+                  cta="See better →"
+                  halo="var(--halo-leaf)"
+                />
+              ) : (
+                <FlatTile kicker="Alternatives" line="Nothing beats this on safety." />
+              )}
+              {flags.length > 0 ? (
+                <QuickTile
+                  href={`/product/${product.id}/flag/${flags[0]!.slug}`}
+                  kicker="Flagged"
+                  kickerColor="var(--verdict-poor)"
+                  count={flags.length}
+                  label={flags.length === 1 ? 'ingredient' : 'ingredients'}
+                  cta="What's flagged →"
+                  halo="var(--halo-clay)"
+                />
+              ) : (
+                <FlatTile kicker="Flags" line="No ingredient flags." />
+              )}
             </div>
-          </Link>
-        ) : (
-          <div
-            className="rounded-card p-3.5"
-            style={{ background: 'var(--card-2)', border: '1px solid var(--line)' }}
-          >
-            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-ink-3">
-              Flags
-            </p>
-            <p className="mt-1 font-display text-[16px] font-semibold leading-tight text-ink">
-              No ingredient flags.
-            </p>
+
+            {/* Sonion reads the verdict and reacts to weight changes. */}
+            <div
+              className="relative flex items-center gap-3 overflow-hidden rounded-card p-3.5"
+              style={{ background: 'var(--card-2)', border: '1px solid var(--line)' }}
+            >
+              <SonionReactive pillars={pillars} size={64} halo />
+            </div>
           </div>
-        )}
-      </section>
+        </aside>
 
-      {/* ─── EVERY RATER ────────────────────────────────────────────────── */}
-      <section className="mb-5 anim-rise" style={{ animationDelay: '240ms' }}>
-        <SectionLabel kicker="the receipts" title="Every rater, every axis" />
-        <div
-          className="rounded-card p-4"
-          style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
-        >
-          <RaterSpread pillars={pillars} />
-        </div>
-        {/* How well these ratings are matched to this product, and how complete
-            the coverage is — surfaced, not hidden (see CLAUDE.md). */}
-        <div className="mt-3">
-          <MatchProvenance pillars={pillars} />
-        </div>
-      </section>
+        {/* ── RECEIPTS (left on desktop) ───────────────────────────────── */}
+        <div className="mt-6 min-w-0 space-y-6 lg:order-1 lg:mt-0">
+          {/* Disagreement callout — the thesis, up top. */}
+          <div className="anim-rise" style={{ animationDelay: '120ms' }}>
+            <DisagreementCallout pillars={pillars} />
+          </div>
 
-      {/* ─── HOW THIS SCORE IS BUILT ───────────────────────────────────── */}
-      <section className="mb-5 anim-rise" style={{ animationDelay: '260ms' }}>
-        <ScoreMethodology pillars={pillars} sources={sources} />
-      </section>
+          {/* Every rater, every axis. */}
+          <section className="anim-rise" style={{ animationDelay: '160ms' }}>
+            <SectionLabel kicker="the receipts" title="Every rater, every axis" />
+            <div
+              className="rounded-card p-4 md:p-5"
+              style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
+            >
+              <RaterSpread pillars={pillars} />
+            </div>
+            <div className="mt-3">
+              <MatchProvenance pillars={pillars} />
+            </div>
+          </section>
 
-      {/* ─── COMPOSITE RANGE ───────────────────────────────────────────── */}
-      <section className="mb-5 anim-rise" style={{ animationDelay: '280ms' }}>
-        <SectionLabel kicker="your composite" title="Weighted by what you care about" />
-        <div
-          className="rounded-card p-4"
-          style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
-        >
-          <CompositeRange pillars={pillars} />
-        </div>
-      </section>
+          {/* How the score is built. */}
+          <section className="anim-rise" style={{ animationDelay: '200ms' }}>
+            <ScoreMethodology pillars={pillars} sources={sources} />
+          </section>
 
-      {/* ─── WEIGHTS ───────────────────────────────────────────────────── */}
-      <section className="mb-6 anim-rise" style={{ animationDelay: '320ms' }}>
-        <WeightControls />
-      </section>
-
-      {/* ─── FLAGGED LIST ──────────────────────────────────────────────── */}
-      {flags.length > 0 && (
-        <section className="mb-6">
-          <SectionLabel kicker="contested chemistry" title="Flagged ingredients" />
-          <ul className="space-y-2">
-            {flags.map((f) => (
-              <li key={f.slug}>
-                <Link
-                  href={`/product/${product.id}/flag/${f.slug}`}
-                  className="flex items-center justify-between rounded-card px-4 py-3 transition hover:shadow-card"
-                  style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
-                >
-                  <span className="font-display text-[15px] font-medium text-ink">{f.name}</span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-3">
-                    {f.positions.length} positions →
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* ─── INGREDIENTS ───────────────────────────────────────────────── */}
-      <section>
-        <SectionLabel kicker="as labeled" title="Ingredients" />
-        <ul className="flex flex-wrap gap-1.5">
-          {product.ingredients.map((name) => {
-            const slug = ingredientSlug(name);
-            const flagged = flags.some((f) => f.slug === slug);
-            const inner = (
-              <span
-                className={`rounded-pill px-2.5 py-1 text-[11px] ${
-                  flagged
-                    ? 'font-semibold text-ink'
-                    : 'text-ink-2'
-                }`}
-                style={{
-                  background: flagged ? 'var(--card)' : 'var(--card-2)',
-                  border: flagged
-                    ? '1px solid var(--verdict-poor)'
-                    : '1px solid var(--line-soft)',
-                }}
+          {/* Your composite — controls + the range they produce. */}
+          <section className="anim-rise" style={{ animationDelay: '220ms' }}>
+            <SectionLabel kicker="your composite" title="Weighted by what you care about" />
+            <div className="space-y-3">
+              <WeightControls />
+              <div
+                className="rounded-card p-4 md:p-5"
+                style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
               >
-                {name}
-                {flagged && (
-                  <span className="ml-1.5 text-[9px] font-semibold uppercase tracking-wider" style={{ color: 'var(--verdict-poor)' }}>
-                    · flagged
-                  </span>
-                )}
-              </span>
-            );
-            return (
-              <li key={name}>
-                {flagged ? (
-                  <Link href={`/product/${product.id}/flag/${slug}`}>{inner}</Link>
-                ) : (
-                  inner
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+                <CompositeRange pillars={pillars} />
+              </div>
+            </div>
+          </section>
 
-      {/* ─── FLOATING SONION ───────────────────────────────────────────── */}
-      {/* Anchored to the centered column, not the raw viewport, so on desktop
-          it sits at the column's bottom-right instead of the far screen edge. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-8 z-40 mx-auto w-full max-w-xl px-5">
-        <div className="pointer-events-auto ml-auto w-max">
-          <SonionReactive pillars={pillars} size={84} halo />
+          {/* Flagged ingredients list. */}
+          {flags.length > 0 && (
+            <section>
+              <SectionLabel kicker="contested chemistry" title="Flagged ingredients" />
+              <ul className="space-y-2">
+                {flags.map((f) => (
+                  <li key={f.slug}>
+                    <Link
+                      href={`/product/${product.id}/flag/${f.slug}`}
+                      className="flex items-center justify-between rounded-card px-4 py-3 transition hover:shadow-card"
+                      style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
+                    >
+                      <span className="font-display text-[15px] font-medium text-ink">{f.name}</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-3">
+                        {f.positions.length} positions →
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* Ingredients. */}
+          <section>
+            <SectionLabel kicker="as labeled" title="Ingredients" />
+            <ul className="flex flex-wrap gap-1.5">
+              {product.ingredients.map((name) => {
+                const slug = ingredientSlug(name);
+                const flagged = flags.some((f) => f.slug === slug);
+                const inner = (
+                  <span
+                    className={`rounded-pill px-2.5 py-1 text-[11px] ${
+                      flagged ? 'font-semibold text-ink' : 'text-ink-2'
+                    }`}
+                    style={{
+                      background: flagged ? 'var(--card)' : 'var(--card-2)',
+                      border: flagged
+                        ? '1px solid var(--verdict-poor)'
+                        : '1px solid var(--line-soft)',
+                    }}
+                  >
+                    {name}
+                    {flagged && (
+                      <span
+                        className="ml-1.5 text-[9px] font-semibold uppercase tracking-wider"
+                        style={{ color: 'var(--verdict-poor)' }}
+                      >
+                        · flagged
+                      </span>
+                    )}
+                  </span>
+                );
+                return (
+                  <li key={name}>
+                    {flagged ? (
+                      <Link href={`/product/${product.id}/flag/${slug}`}>{inner}</Link>
+                    ) : (
+                      inner
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
         </div>
       </div>
     </main>
   );
 }
 
+function Meta({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      className="rounded-pill px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-ink-2"
+      style={{ background: 'var(--card-2)', border: '1px solid var(--line-soft)' }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function QuickTile({
+  href,
+  kicker,
+  kickerColor,
+  count,
+  label,
+  cta,
+  halo,
+}: {
+  href: string;
+  kicker: string;
+  kickerColor: string;
+  count: number;
+  label: string;
+  cta: string;
+  halo: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="relative overflow-hidden rounded-card p-3.5 transition hover:shadow-card"
+      style={{ background: 'var(--card)', border: '1px solid var(--line)', ['--halo' as string]: halo }}
+    >
+      <div className="halo-content">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: kickerColor }}>
+          {kicker}
+        </p>
+        <p className="mt-1 font-display text-[18px] font-semibold leading-none text-ink">
+          {count} <span className="text-[12px] italic font-medium text-ink-2">{label}</span>
+        </p>
+        <span className="mt-2.5 inline-block text-[11px] font-semibold" style={{ color: 'var(--accent-deep)' }}>
+          {cta}
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function FlatTile({ kicker, line }: { kicker: string; line: string }) {
+  return (
+    <div className="rounded-card p-3.5" style={{ background: 'var(--card-2)', border: '1px solid var(--line)' }}>
+      <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-ink-3">{kicker}</p>
+      <p className="mt-1 font-display text-[15px] font-semibold leading-tight text-ink">{line}</p>
+    </div>
+  );
+}
+
 function SectionLabel({ kicker, title }: { kicker: string; title: string }) {
   return (
-    <div className="mb-2.5 flex items-baseline justify-between">
-      <h2 className="font-display text-[17px] font-semibold leading-none text-ink">
-        {title}
-      </h2>
+    <div className="mb-2.5 flex items-baseline justify-between border-b pb-2" style={{ borderColor: 'var(--line)' }}>
+      <h2 className="font-display text-[18px] font-semibold leading-none text-ink">{title}</h2>
       <span className="text-[9.5px] font-semibold uppercase tracking-[0.22em]" style={{ color: 'var(--accent-deep)' }}>
         {kicker}
       </span>
