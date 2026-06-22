@@ -117,6 +117,20 @@ describe('narrateWeightChange', () => {
     expect(typeof line).toBe('string');
     expect(line.length).toBeGreaterThan(0);
   });
+
+  it('lifts when the first weight is raised from a null composite (verb falls back to marginalEffect)', () => {
+    // No prior composite (every weight was zero), now a lifting axis gets weight:
+    // the only path that trusts marginalEffect instead of real before/after.
+    const line = narrateWeightChange({
+      prevOverall: null,
+      nextOverall: 71,
+      changedAxis: 'ingredient_safety',
+      effect: 'lifts',
+      increased: true,
+    });
+    expect(line.toLowerCase()).toContain('lifts');
+    expect(line.toLowerCase()).not.toContain('drags');
+  });
 });
 
 describe('greet', () => {
