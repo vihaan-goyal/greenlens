@@ -117,7 +117,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                   kicker="Cleaner options"
                   kickerColor="var(--verdict-excellent)"
                   count={alternatives.length}
-                  label={alternatives.length === 1 ? 'found' : 'found'}
+                  label="found"
                   cta="See better →"
                   halo="var(--halo-leaf)"
                 />

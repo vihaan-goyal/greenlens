@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 
@@ -27,7 +28,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         style={{ background: 'radial-gradient(closest-side, var(--halo-amber), transparent 70%)' }}
       />
 
-      <SiteHeader />
+      {/* Suspense boundary for SiteHeader's useSearchParams (reflecting the
+          active query in the masthead search). */}
+      <Suspense fallback={<div className="h-[57px]" style={{ borderBottom: '1px solid var(--line)' }} />}>
+        <SiteHeader />
+      </Suspense>
       <div className="relative z-10 flex-1">{children}</div>
       <div className="relative z-10">
         <SiteFooter />

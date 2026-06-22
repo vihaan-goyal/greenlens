@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 /**
  * Persistent masthead for the app screens. This is the single biggest thing that
@@ -16,6 +16,9 @@ import { usePathname } from 'next/navigation';
 export function SiteHeader() {
   const pathname = usePathname() ?? '';
   const onCatalog = pathname === '/browse' || pathname.startsWith('/product');
+  // Reflect the active query so the always-visible bar can't misrepresent state:
+  // an empty re-submit would fall through to YourShelf and silently drop it.
+  const activeQuery = useSearchParams()?.get('q') ?? '';
 
   return (
     <header
@@ -63,7 +66,10 @@ export function SiteHeader() {
           <NavLink href="/#install" active={false}>
             Extension
           </NavLink>
-          <NavLink href="/" active={pathname === '/'}>
+          {/* Marketing landing (app/page.tsx) is a self-contained, frame-free
+              surface with its own header — the app chrome never renders there,
+              so this link can never be the active route. */}
+          <NavLink href="/" active={false}>
             How it works
           </NavLink>
         </nav>
@@ -81,6 +87,7 @@ export function SiteHeader() {
             <input
               name="q"
               type="text"
+              defaultValue={activeQuery}
               placeholder="Look up a product"
               aria-label="Search products"
               className="w-28 min-w-0 bg-transparent text-[12.5px] text-ink outline-none placeholder:text-ink-3 focus:w-40 md:w-36 md:focus:w-52"
