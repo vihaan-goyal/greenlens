@@ -7,10 +7,10 @@
 //
 // Reads through the shared `repository` accessor — the SAME catalog the UI
 // renders — so a match here always resolves to a product the "see full
-// breakdown" page can load. Run the app with GREENLENS_REPO=prisma (npm run
-// dev:full) to match against the full ingested catalog; plain `npm run dev`
-// matches the 17-product seed. Needs the Node runtime (Prisma) and must never be
-// statically cached (the catalog grows as you ingest).
+// breakdown" page can load. The accessor now defaults to the full ingested
+// Prisma catalog (set GREENLENS_REPO=mock to match against the 17-product seed
+// instead). Needs the Node runtime (Prisma) and must never be statically cached
+// (the catalog grows as you ingest).
 
 import { NextResponse } from 'next/server';
 import { repository } from '@/lib/data';
@@ -95,6 +95,8 @@ export async function POST(req: Request) {
   const view = await repository.getProduct(match.productId);
   if (!view) return NextResponse.json({ match: null }, { headers: CORS });
   const flags = await repository.listIngredientFlags(match.productId);
+  // Safest cleaner option in the same category, or none if this is already it.
+  const alternatives = await repository.listAlternatives(match.productId);
 
   const payload: VerdictPayload = {
     product: view.product,
@@ -102,6 +104,7 @@ export async function POST(req: Request) {
     pillars: view.pillars,
     sources: view.sources,
     flags,
+    topAlternative: alternatives[0],
     matchConfidence: match.confidence,
     ambiguous: match.ambiguous,
   };

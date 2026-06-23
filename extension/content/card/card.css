@@ -282,6 +282,58 @@
   margin: 0;
 }
 
+/* In-context cleaner alternative — a small tappable card above the report link. */
+.gl-alt {
+  display: block;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  text-decoration: none;
+  transition: border-color 140ms ease;
+}
+.gl-alt:hover {
+  border-color: var(--accent-deep);
+}
+.gl-alt:focus-visible {
+  outline: 2px solid var(--accent-deep);
+  outline-offset: 2px;
+}
+.gl-alt-eyebrow {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  margin: 0 0 4px;
+}
+.gl-alt-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.gl-alt-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.3;
+}
+.gl-alt-score {
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.gl-alt-note {
+  display: block;
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
 /* Deep link out to the full report on the web app. */
 .gl-report-link {
   display: inline-flex;

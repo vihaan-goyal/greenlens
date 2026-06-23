@@ -3,6 +3,7 @@ import type { VerdictPayload } from '../../shared/messages';
 import { overall, overallRange, topMarginalDriver } from '@/lib/domain/scoring';
 import { VERDICT_LABEL, VERDICT_VAR, verdictBand } from '@/lib/domain/verdict';
 import { AXIS_PHRASE, type Weights } from '@/lib/domain/types';
+import type { AlternativeView } from '@/lib/data/repository';
 import { Sonion, type SonionMood } from '@/components/Sonion';
 import { Floater } from './Floater';
 import { usePanel } from './usePanel';
@@ -117,6 +118,9 @@ export function Card({ payload, weights }: Props) {
               </span>
             ))}
           </div>
+          {payload.topAlternative && (
+            <CleanerOption alt={payload.topAlternative} weights={weights} />
+          )}
           <a
             className="gl-report-link"
             href={productUrl(payload.product.id)}
@@ -132,6 +136,48 @@ export function Card({ payload, weights }: Props) {
       )}
     </div>
     </Floater>
+  );
+}
+
+/**
+ * The Phia-shaped move: surface the single safest cleaner alternative right in
+ * the shopping flow, not behind a click-through. Ranked by ingredient_safety
+ * upstream (never payout), so its presence already means it's genuinely safer.
+ * We still name the tradeoff — honesty over a one-sided pitch.
+ */
+function CleanerOption({ alt, weights }: { alt: AlternativeView; weights: Weights }) {
+  const o = overall(alt.view.pillars, weights);
+  const band = verdictBand(o);
+  const color = band ? VERDICT_VAR[band] : 'var(--ink-3)';
+  const safer = alt.cleaner.find((c) => c.axis === 'ingredient_safety') ?? alt.cleaner[0];
+  // The biggest thing it gives up, if any — stated plainly, not buried.
+  const tradeoff = [...alt.tradeoffs].sort((a, b) => a.delta - b.delta)[0];
+
+  return (
+    <a
+      className="gl-alt"
+      href={productUrl(alt.view.product.id)}
+      target="_blank"
+      rel="noreferrer noopener"
+    >
+      <span className="gl-alt-eyebrow">Cleaner option</span>
+      <span className="gl-alt-row">
+        <span className="gl-alt-name">
+          {alt.view.brand.name} {alt.view.product.displayName}
+        </span>
+        <span className="gl-alt-score" style={{ color }}>
+          {o === null ? '—' : Math.round(o)}
+        </span>
+      </span>
+      {safer && (
+        <span className="gl-alt-note">
+          Safer on {AXIS_PHRASE[safer.axis]} (+{Math.round(safer.delta)})
+          {tradeoff && (
+            <> · trades off {AXIS_PHRASE[tradeoff.axis]} ({Math.round(tradeoff.delta)})</>
+          )}
+        </span>
+      )}
+    </a>
   );
 }
 

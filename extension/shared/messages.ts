@@ -1,5 +1,5 @@
 import type { IngredientFlag, Pillars, Weights } from '@/lib/domain/types';
-import type { ProductView } from '@/lib/data/repository';
+import type { AlternativeView, ProductView } from '@/lib/data/repository';
 import type { RawProductSighting } from './sighting';
 
 /**
@@ -31,6 +31,13 @@ export interface VerdictPayload {
    * product, never aggregated into a single number.
    */
   flags: IngredientFlag[];
+  /**
+   * The single safest cleaner alternative in the same category, if one exists
+   * (ranked by ingredient_safety, never affiliate payout — see CLAUDE.md). Absent
+   * when this product is already the safest of its kind. Lets the card surface
+   * "here's a cleaner one" in the shopping flow instead of a click-through.
+   */
+  topAlternative?: AlternativeView;
   /** 0..1, how confident the matcher is this is the right canonical product. */
   matchConfidence: number;
   /**
