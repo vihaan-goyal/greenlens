@@ -3,6 +3,7 @@ import {
   AXIS_LABEL,
   FUNDING_LABEL,
   type FundingModel,
+  isIllustrative,
   type Pillars,
 } from '@/lib/domain/types';
 import { VERDICT_VAR, verdictBand } from '@/lib/domain/verdict';
@@ -70,6 +71,7 @@ export function RaterSpread({ pillars }: { pillars: Pillars }) {
                           {r.sourceName}
                         </span>
                         <FundingChip funding={r.fundingModel} />
+                        {isIllustrative(r.sourceId) && <IllustrativeChip />}
                         <MatchChip tier={ratingTier(r)} />
                       </div>
                       <span
@@ -160,6 +162,27 @@ function FundingChip({ funding }: { funding: FundingModel }) {
       }}
     >
       {FUNDING_LABEL[funding]}
+    </span>
+  );
+}
+
+// Illustrative-data marker. This rater's number is invented for the demo (it's
+// licensing-blocked or not yet integrated — see ILLUSTRATIVE_SOURCE_IDS), so we
+// stamp it rather than let a reader mistake it for a real source rating. Same
+// outlined-pill shape as the chips around it, caution-neutral tone.
+function IllustrativeChip() {
+  return (
+    <span
+      className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em]"
+      style={{
+        background: 'transparent',
+        color: 'var(--verdict-poor)',
+        border: '1px solid var(--verdict-poor)',
+      }}
+      title="Illustrative data — this rater isn't integrated yet; the score is shown for demonstration, not pulled from the source."
+      aria-label="Illustrative data, shown for demonstration"
+    >
+      illustrative
     </span>
   );
 }

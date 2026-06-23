@@ -50,8 +50,10 @@ export const SOURCES: Source[] = [
     fundingModel: 'ad_supported',
   },
   // Stand-in raters for the other axes so the four-pillar UI has something to
-  // show. These will be replaced by real Open Beauty Facts signals + ad-hoc
-  // rater data later.
+  // show. Their scores below are *illustrative*, not real data — flagged via
+  // ILLUSTRATIVE_SOURCE_IDS (lib/domain/types) and stamped in the UI so a reader
+  // never mistakes a demo number for a real source rating. good-on-you /
+  // how2recycle have no integration yet.
   {
     id: 'obf-eco',
     name: 'Open Beauty Facts',
@@ -128,8 +130,11 @@ export const BRANDS: Brand[] = [
   { id: 'brand-vela', name: 'Vela Skin', aliases: ['Vela', 'vela skin co.'] },
   { id: 'brand-fern', name: 'Fern & Field', aliases: ['Fern', 'fern field', 'fern and field'] },
   // ── Real brands kept as seed data so the extension demo can match against
-  //    pages someone actually has open. Ratings below are placeholders —
-  //    real ingestion (EWG/Yuka/INCI/etc.) lands later.
+  //    pages someone actually has open. Their EWG/Yuka/INCI scores are
+  //    *illustrative* — those sources are licensing-blocked (we never scrape
+  //    them), so the numbers are demo-only and the UI marks them as such
+  //    (ILLUSTRATIVE_SOURCE_IDS). The computed sources on these products
+  //    (ingredient-hazard, packaging-scan, cruelty-free) are real.
   { id: 'brand-cerave', name: 'CeraVe', aliases: ['Cera Ve', 'cerave'] },
   { id: 'brand-ordinary', name: 'The Ordinary', aliases: ['theordinary', 'deciem', 'ordinary'] },
   { id: 'brand-olaplex', name: 'Olaplex', aliases: ['olaplex inc'] },

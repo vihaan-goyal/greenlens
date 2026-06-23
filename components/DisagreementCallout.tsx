@@ -1,5 +1,5 @@
 import { detectDisagreements } from '@/lib/domain/disagreement';
-import { AXIS_LABEL, FUNDING_LABEL, type Pillars } from '@/lib/domain/types';
+import { AXIS_LABEL, FUNDING_LABEL, isIllustrative, type Pillars } from '@/lib/domain/types';
 import { VERDICT_VAR, verdictBand } from '@/lib/domain/verdict';
 
 /**
@@ -51,6 +51,7 @@ export function DisagreementCallout({ pillars }: { pillars: Pillars }) {
             score={d.low.score}
             color={lowColor}
             align="left"
+            illustrative={isIllustrative(d.low.sourceId)}
           />
           <span
             className="font-display text-[20px] font-semibold italic"
@@ -64,6 +65,7 @@ export function DisagreementCallout({ pillars }: { pillars: Pillars }) {
             score={d.high.score}
             color={highColor}
             align="right"
+            illustrative={isIllustrative(d.high.sourceId)}
           />
         </div>
 
@@ -104,12 +106,14 @@ function RaterCorner({
   score,
   color,
   align,
+  illustrative,
 }: {
   name: string;
   funding: keyof typeof FUNDING_LABEL;
   score: number;
   color: string;
   align: 'left' | 'right';
+  illustrative: boolean;
 }) {
   return (
     <div className={`flex flex-col ${align === 'right' ? 'items-end text-right' : 'items-start'}`}>
@@ -121,10 +125,23 @@ function RaterCorner({
       </span>
       <span className="mt-1 text-[12px] font-semibold leading-tight text-ink">{name}</span>
       <span
-        className="mt-1 rounded-pill px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
-        style={{ background: 'var(--card-2)', color: 'var(--ink-2)' }}
+        className={`mt-1 flex flex-wrap gap-1 ${align === 'right' ? 'justify-end' : 'justify-start'}`}
       >
-        {FUNDING_LABEL[funding as keyof typeof FUNDING_LABEL]}
+        <span
+          className="rounded-pill px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
+          style={{ background: 'var(--card-2)', color: 'var(--ink-2)' }}
+        >
+          {FUNDING_LABEL[funding as keyof typeof FUNDING_LABEL]}
+        </span>
+        {illustrative && (
+          <span
+            className="rounded-pill px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
+            style={{ background: 'transparent', color: 'var(--verdict-poor)', border: '1px solid var(--verdict-poor)' }}
+            title="Illustrative data — shown for demonstration, not pulled from this source."
+          >
+            illustrative
+          </span>
+        )}
       </span>
     </div>
   );

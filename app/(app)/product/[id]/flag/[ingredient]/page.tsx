@@ -6,6 +6,7 @@ import { VERDICT_VAR } from '@/lib/domain/verdict';
 import {
   FUNDING_LABEL,
   type IngredientStance,
+  isIllustrative,
 } from '@/lib/domain/types';
 
 interface PageProps {
@@ -72,7 +73,18 @@ export default async function FlagPage({ params }: PageProps) {
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-ink">{pos.sourceName}</p>
+                  <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
+                    {pos.sourceName}
+                    {isIllustrative(pos.sourceId) && (
+                      <span
+                        className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em]"
+                        style={{ color: 'var(--verdict-poor)', border: '1px solid var(--verdict-poor)' }}
+                        title="Illustrative data — this rater isn't integrated yet; the stance is shown for demonstration, not pulled from the source."
+                      >
+                        illustrative
+                      </span>
+                    )}
+                  </p>
                   <p className="text-[11px] uppercase tracking-wider text-ink-3">
                     {FUNDING_LABEL[pos.fundingModel]}
                   </p>

@@ -35,6 +35,26 @@ export const FUNDING_LABEL: Record<FundingModel, string> = {
 
 export type FundingModel = 'nonprofit' | 'independent' | 'ad_supported' | 'subscription';
 
+/**
+ * Sources whose ratings in this codebase are *illustrative* — invented for the
+ * demo, not real data. EWG/Yuka/INCI Beauty are licensing-blocked (the project
+ * never scrapes them), and Good On You / How2Recycle are stand-in raters with no
+ * integration yet. The real, computed sources (`ingredient-hazard`,
+ * `packaging-scan`, `cruelty-free`, and `obf-eco` once ingested) are *not* here.
+ * The UI marks these so a reader never mistakes a demo number for a real source
+ * rating — the product's defining honesty rule.
+ */
+export const ILLUSTRATIVE_SOURCE_IDS: ReadonlySet<string> = new Set([
+  'ewg',
+  'yuka',
+  'inci-beauty',
+  'good-on-you',
+  'how2recycle',
+]);
+
+export const isIllustrative = (sourceId: string): boolean =>
+  ILLUSTRATIVE_SOURCE_IDS.has(sourceId);
+
 export type ScaleDirection = 'higher_is_better' | 'lower_is_better';
 
 export interface Brand {
