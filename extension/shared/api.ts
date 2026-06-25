@@ -5,8 +5,8 @@
 /** chrome.storage.local key holding the user-set API base. */
 export const API_BASE_KEY = 'greenlens.apiBase';
 
-/** Default base when the user hasn't set one — the local dev server. */
-export const DEFAULT_API_BASE = 'http://localhost:3000';
+/** Default base when the user hasn't set one — the production server. */
+export const DEFAULT_API_BASE = 'https://greenlens.vercel.app';
 
 /**
  * Normalize a user-entered API base: trim whitespace, strip trailing slashes so
