@@ -17,8 +17,15 @@ Greenlens lets someone look up a cosmetics product and see what every public rat
 - Blending *different axes* (safety + environmental + labor + packaging) into one overall number is allowed **only with user-controlled weights**, computed at read time, **never persisted**.
 This is encoded in the data model and domain logic, not just the UI.
 
+## Deployment
+- **Web app**: https://greenlens-vert.vercel.app (Next.js on Vercel)
+- **Database**: PostgreSQL on Railway (`reseau.proxy.rlwy.net:55538`, internal `postgres.railway.internal:5432`)
+- **Extension**: submitted to Chrome Web Store (v0.0.1, pending review as of 2026-06-25)
+- **Env vars on Vercel**: `DATABASE_URL` (Railway public URL), `AMAZON_PA_ACCESS_KEY`, `AMAZON_PA_SECRET_KEY`, `AMAZON_PA_PARTNER_TAG`
+- To grow the catalog: `$env:DATABASE_URL="<railway-public-url>"; npm run db:ingest` (currently ~25 products ingested, page 1/100 of Open Beauty Facts)
+
 ## Stack (use exactly this)
-Next.js (latest, App Router) · TypeScript (strict) · Tailwind · Framer Motion (Sonion) · Zustand (client state) · Prisma + SQLite (dev, Postgres-ready) · Vitest · Zod (validate external data). No component library required (Radix primitives if needed). No charting library — the score ring is custom SVG.
+Next.js (latest, App Router) · TypeScript (strict) · Tailwind · Framer Motion (Sonion) · Zustand (client state) · Prisma + PostgreSQL · Vitest · Zod (validate external data). No component library required (Radix primitives if needed). No charting library — the score ring is custom SVG.
 
 ## Architecture (strict layering)
 `/lib/domain` and `/lib/matcher` are **pure** and import nothing from React/Next.
@@ -92,3 +99,6 @@ Everything behind `ProductRepository`, mock first. Then `open-beauty-facts.ts`: 
 
 ## Constraints / non-goals
 Cosmetics only. Never average conflicting same-axis ratings; never persist the overall. User owns the weighting (no hidden "objective" defaults). Funding model always visible with a rating. TS strict, no `any` in domain code; `/lib/domain` and `/lib/matcher` import nothing from React/Next. Accessibility and `prefers-reduced-motion` are requirements. Scan is simulated; no camera/barcode hardware yet.
+
+## Extension build
+Build with `$env:GL_SITE_URL="https://greenlens-vert.vercel.app"; npm run ext:build` — output in `dist/extension/`. The extension's default API base (`extension/shared/api.ts`) points to the Vercel deployment. Users can override it in the Options page. Do not use SQLite-only `PRAGMA` statements anywhere — the database is PostgreSQL.

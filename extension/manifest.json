@@ -37,6 +37,14 @@
       ],
       "js": ["content/index.ts"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "https://greenlens.app/*"
+      ],
+      "js": ["content/greenlens-sync.ts"],
+      "run_at": "document_idle"
     }
   ],
   "permissions": ["storage", "activeTab"],
@@ -45,6 +53,8 @@
     "https://smile.amazon.com/*",
     "https://www.sephora.com/*",
     "http://localhost/*",
-    "http://127.0.0.1/*"
+    "http://localhost:3000/*",
+    "http://127.0.0.1/*",
+    "https://greenlens.app/*"
   ]
 }
