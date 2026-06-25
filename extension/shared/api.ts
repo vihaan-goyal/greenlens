@@ -6,7 +6,7 @@
 export const API_BASE_KEY = 'greenlens.apiBase';
 
 /** Default base when the user hasn't set one — the production server. */
-export const DEFAULT_API_BASE = 'https://greenlens.vercel.app';
+export const DEFAULT_API_BASE = 'https://greenlens-vert.vercel.app';
 
 /**
  * Normalize a user-entered API base: trim whitespace, strip trailing slashes so
