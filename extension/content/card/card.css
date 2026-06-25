@@ -106,19 +106,27 @@
   cursor: default;
 }
 
-/* Sonion's idle bob. .anim-drift is set on the Sonion wrapper by /components/Sonion;
-   the class lives in app/globals.css for the Next.js side, so re-declare it here
-   inside the shadow root. */
+/* Sonion animation keyframes — re-declared here because the shadow root
+   cannot reach app/globals.css on the Next.js side. */
 @keyframes drift {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-3px); }
 }
-.anim-drift {
-  animation: drift 5s ease-in-out infinite;
+@keyframes nod {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25%      { transform: translateY(1.5px) rotate(-1.5deg); }
+  75%      { transform: translateY(-1.5px) rotate(1.5deg); }
 }
+@keyframes talk {
+  0%, 100% { transform: scaleY(0.35); }
+  50%       { transform: scaleY(1); }
+}
+.anim-drift { animation: drift 5s ease-in-out infinite; }
+.anim-nod   { animation: nod 600ms ease-in-out 2; }
+.anim-talk  { animation: talk 220ms ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-drift { animation: none; }
+  .anim-drift, .anim-nod, .anim-talk { animation: none; }
 }
 
 .gl-trigger-text {

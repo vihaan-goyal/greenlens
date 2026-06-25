@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useWeights } from '@/lib/store';
 import { AXES, AXIS_LABEL, type Axis } from '@/lib/domain/types';
 
@@ -22,6 +23,7 @@ export function WeightControls() {
     <details
       className="group relative overflow-hidden rounded-card"
       style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
+      open
     >
       <summary
         className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5"
@@ -94,7 +96,20 @@ function Slider({
   onChange: (axis: Axis, v: number) => void;
 }) {
   const id = `weight-${axis}`;
-  const pct = (value / MAX) * 100;
+  // Local draft tracks the thumb visually during drag. The store (and therefore
+  // ScoreRing + Sonion) only updates on pointer/key release, so rapid scrubbing
+  // doesn't spaz out the score and dialogue.
+  const [draft, setDraft] = useState(value);
+
+  // Keep draft in sync when the committed value changes externally (e.g. Reset).
+  useEffect(() => { setDraft(value); }, [value]);
+
+  const pct = (draft / MAX) * 100;
+
+  function commit() {
+    onChange(axis, draft);
+  }
+
   return (
     <div>
       <div className="mb-1 flex items-baseline justify-between">
@@ -104,11 +119,11 @@ function Slider({
         <span
           className="tabular rounded-pill px-2 py-0.5 text-[10px] font-semibold"
           style={{
-            color: value === 0 ? 'var(--ink-3)' : 'var(--accent-deep)',
-            background: value === 0 ? 'var(--card-2)' : 'color-mix(in srgb, var(--accent-deep) 12%, transparent)',
+            color: draft === 0 ? 'var(--ink-3)' : 'var(--accent-deep)',
+            background: draft === 0 ? 'var(--card-2)' : 'color-mix(in srgb, var(--accent-deep) 12%, transparent)',
           }}
         >
-          {value.toFixed(1)}×
+          {draft.toFixed(1)}×
         </span>
       </div>
       <div className="relative h-2 rounded-pill" style={{ background: 'var(--card-2)' }}>
@@ -126,11 +141,13 @@ function Slider({
           min={0}
           max={MAX}
           step={STEP}
-          value={value}
-          onChange={(e) => onChange(axis, Number(e.target.value))}
+          value={draft}
+          onChange={(e) => setDraft(Number(e.target.value))}
+          onPointerUp={commit}
+          onKeyUp={commit}
           aria-valuemin={0}
           aria-valuemax={MAX}
-          aria-valuenow={value}
+          aria-valuenow={draft}
           className="absolute inset-0 w-full cursor-pointer opacity-0"
           style={{ height: '100%' }}
         />

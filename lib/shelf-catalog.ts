@@ -1,5 +1,6 @@
-import type { Axis, Pillars } from './domain/types';
+import { AXES, type Axis, type Pillars } from './domain/types';
 import { repository } from './data';
+import type { ProductView } from './data/repository';
 
 /**
  * Lookup tables the client shelf needs to render any product it has in history,
@@ -33,15 +34,23 @@ export interface ShelfCatalog {
   products: Record<string, ShelfCard>;
   /** base product id → its cleaner alternatives (already safety-ranked). */
   alternatives: Record<string, ShelfBranch[]>;
+  /** Full product views — returned so callers can avoid a second listProducts(). */
+  views: ProductView[];
 }
 
+const DELTA_MIN = 5;
+
 /**
- * Build the full client lookup table for every catalog product. The catalog is
- * small (seed data), so eagerly resolving all products + their alternatives is
- * cheap and keeps the client free of any async/repository concerns.
+ * Build the full client lookup table for every catalog product.
+ *
+ * All views are loaded in a single batched query via listProducts(). Alternatives
+ * are then computed in-memory from the already-loaded views — no additional DB
+ * queries. The old approach called listAlternatives() per product, which fired
+ * O(N²) queries (one buildView per same-category peer, per product).
  */
 export async function buildShelfCatalog(): Promise<ShelfCatalog> {
   const views = await repository.listProducts();
+
   const products: Record<string, ShelfCard> = {};
   for (const v of views) {
     products[v.product.id] = {
@@ -55,17 +64,40 @@ export async function buildShelfCatalog(): Promise<ShelfCatalog> {
     };
   }
 
-  const alternatives: Record<string, ShelfBranch[]> = {};
-  await Promise.all(
-    views.map(async (v) => {
-      const alts = await repository.listAlternatives(v.product.id);
-      alternatives[v.product.id] = alts.map((a) => ({
-        id: a.view.product.id,
-        cleaner: a.cleaner,
-        tradeoffs: a.tradeoffs,
-      }));
-    }),
-  );
+  // Group views by category so each base product only scans its own peers.
+  const byCategory = new Map<string, ProductView[]>();
+  for (const v of views) {
+    const cat = v.product.category;
+    if (!byCategory.has(cat)) byCategory.set(cat, []);
+    byCategory.get(cat)!.push(v);
+  }
 
-  return { products, alternatives };
+  const alternatives: Record<string, ShelfBranch[]> = {};
+  for (const base of views) {
+    const baseSafety = base.pillars.ingredient_safety.representative ?? -Infinity;
+    const peers = byCategory.get(base.product.category) ?? [];
+    alternatives[base.product.id] = peers
+      .filter((v) => v.product.id !== base.product.id)
+      .filter((v) => (v.pillars.ingredient_safety.representative ?? -Infinity) > baseSafety)
+      .sort(
+        (a, b) =>
+          (b.pillars.ingredient_safety.representative ?? -Infinity) -
+          (a.pillars.ingredient_safety.representative ?? -Infinity),
+      )
+      .map((alt) => {
+        const cleaner: Array<{ axis: Axis; delta: number }> = [];
+        const tradeoffs: Array<{ axis: Axis; delta: number }> = [];
+        for (const axis of AXES) {
+          const a = alt.pillars[axis].representative;
+          const b = base.pillars[axis].representative;
+          if (a === null || b === null) continue;
+          const d = a - b;
+          if (d >= DELTA_MIN) cleaner.push({ axis, delta: d });
+          else if (d <= -DELTA_MIN) tradeoffs.push({ axis, delta: d });
+        }
+        return { id: alt.product.id, cleaner, tradeoffs };
+      });
+  }
+
+  return { products, alternatives, views };
 }

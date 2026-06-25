@@ -107,35 +107,49 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   private async buildView(productId: string): Promise<ProductView | null> {
-    const row = await prisma.product.findUnique({
-      where: { id: productId },
+    const rows = await this.buildViewsBatch([productId]);
+    return rows[0] ?? null;
+  }
+
+  /**
+   * Fetch multiple products in a single query. Replaces the old per-ID pattern
+   * that fired one round-trip per product (N+1 on listProducts / listAlternatives).
+   * Ordering is preserved — findMany with `in` doesn't guarantee order.
+   */
+  private async buildViewsBatch(productIds: string[]): Promise<ProductView[]> {
+    if (productIds.length === 0) return [];
+    const sources = await this.sources();
+    const rows = await prisma.product.findMany({
+      where: { id: { in: productIds } },
       include: {
         brand: true,
+        // Carry each match's provenance (confidence/method/reviewed) onto its
+        // ratings so the domain layer and UI can surface weak/unreviewed matches
+        // instead of silently presenting them as certain. See lib/domain/provenance.
         matches: { include: { listing: { include: { ratings: true } } } },
       },
     });
-    if (!row) return null;
-
-    const sources = await this.sources();
-    // Carry each match's provenance (confidence/method/reviewed) onto its ratings
-    // so the domain layer and UI can surface weak/unreviewed matches instead of
-    // silently presenting them as certain. See lib/domain/provenance.
-    const ratings = row.matches.flatMap((m) =>
-      m.listing.ratings.map((r) => ({
-        sourceId: m.listing.sourceId,
-        scoreRaw: r.scoreRaw,
-        matchConfidence: m.confidence,
-        matchMethod: m.method,
-        matchReviewed: m.reviewed,
-      })),
-    );
-    const pillars = summarizePillars(ratings, sources);
-    return { product: toProduct(row), brand: toBrand(row.brand), pillars, sources };
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    return productIds
+      .map((id) => byId.get(id))
+      .filter((row): row is NonNullable<typeof row> => row != null)
+      .map((row) => {
+        const ratings = row.matches.flatMap((m) =>
+          m.listing.ratings.map((r) => ({
+            sourceId: m.listing.sourceId,
+            scoreRaw: r.scoreRaw,
+            matchConfidence: m.confidence,
+            matchMethod: m.method,
+            matchReviewed: m.reviewed,
+          })),
+        );
+        const pillars = summarizePillars(ratings, sources);
+        return { product: toProduct(row), brand: toBrand(row.brand), pillars, sources };
+      });
   }
 
   private async buildViews(productIds: string[]): Promise<ProductView[]> {
-    const views = await Promise.all(productIds.map((id) => this.buildView(id)));
-    return views.filter((v): v is ProductView => v !== null);
+    return this.buildViewsBatch(productIds);
   }
 
   async listProducts(): Promise<ProductView[]> {
@@ -191,7 +205,8 @@ export class PrismaProductRepository implements ProductRepository {
       where: { category: base.product.category, id: { not: productId } },
       select: { id: true },
     });
-    const candidates = await this.buildViews(candidateRows.map((p) => p.id));
+    // Single batched query for all candidates (was one query per candidate).
+    const candidates = await this.buildViewsBatch(candidateRows.map((p) => p.id));
 
     return candidates
       .filter((alt) => (alt.pillars.ingredient_safety.representative ?? -Infinity) > baseSafety)

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { VerdictPayload } from '../../shared/messages';
 import { overall, overallRange, topMarginalDriver } from '@/lib/domain/scoring';
 import { VERDICT_LABEL, VERDICT_VAR, verdictBand } from '@/lib/domain/verdict';
@@ -22,6 +22,8 @@ interface Props {
  * Composite is computed at render time from `payload.pillars` + `weights`.
  * We never persist or transmit the blended number.
  */
+const SPEAK_MS = 1300;
+
 export function Card({ payload, weights }: Props) {
   const { open, toggle, close, ref: cardRef, cardClass } = usePanel();
   const range = useMemo(() => overallRange(payload.pillars, weights), [payload, weights]);
@@ -29,6 +31,26 @@ export function Card({ payload, weights }: Props) {
   const band = verdictBand(o);
   const mood: SonionMood = o === null || o < 55 ? 'concerned' : o < 70 ? 'neutral' : 'happy';
   const driver = useMemo(() => topMarginalDriver(payload.pillars, weights), [payload, weights]);
+
+  const [reduced, setReduced] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReduced(mq.matches);
+    const update = () => setReduced(mq.matches);
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    if (open && !reduced) {
+      setSpeaking(true);
+      const t = setTimeout(() => setSpeaking(false), SPEAK_MS);
+      return () => clearTimeout(t);
+    }
+    setSpeaking(false);
+  }, [open, reduced]);
 
   const verdictLine = band ? VERDICT_LABEL[band] : 'No data';
   const color = band ? VERDICT_VAR[band] : 'var(--ink-3)';
@@ -43,7 +65,7 @@ export function Card({ payload, weights }: Props) {
         aria-label={`Greenlens verdict: ${verdictLine} (${o === null ? 'no data' : Math.round(o)} out of 100)`}
         onClick={toggle}
       >
-        <Sonion mood={mood} size={60} idle={!open} />
+        <Sonion mood={mood} size={60} idle={!open} speaking={speaking} />
         <span className="gl-trigger-text">
           <span className="gl-trigger-score" style={{ color }}>
             {o === null ? '—' : Math.round(o)}

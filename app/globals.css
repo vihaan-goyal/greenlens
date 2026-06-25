@@ -175,6 +175,25 @@
   .mark-rose  { background-image: linear-gradient(var(--hl-rose),  var(--hl-rose)); }
   .mark-sand  { background-image: linear-gradient(var(--hl-sand),  var(--hl-sand)); }
 
+  /* Skeleton loading — warm sweep using the existing beige tokens. */
+  @keyframes skel-wave {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .skel {
+    background: linear-gradient(
+      90deg,
+      var(--card-2) 25%,
+      var(--card)   50%,
+      var(--card-2) 75%
+    );
+    background-size: 200% 100%;
+    animation: skel-wave 1.6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skel { animation: none; background: var(--card-2); }
+  }
+
   /* Editorial underline — thick, generous offset, accent-colored. The kind a
      copy editor would draw with a pencil under the word that matters most. */
   .u-bold {

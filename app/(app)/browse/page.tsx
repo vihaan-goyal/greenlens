@@ -28,8 +28,10 @@ export default async function HomePage({ searchParams }: HomeProps) {
   // history, client-rendered) on top of the full catalog grid, which is the
   // thing you actually do when your shelf is empty.
   const results = query ? await repository.searchProducts(query) : [];
+  // buildShelfCatalog already calls listProducts() internally and returns the views,
+  // so we reuse them here instead of firing a second identical query.
   const catalog = query ? null : await buildShelfCatalog();
-  const allProducts = query ? [] : await repository.listProducts();
+  const allProducts = catalog?.views ?? results;
 
   return (
     <main className="relative pb-4">

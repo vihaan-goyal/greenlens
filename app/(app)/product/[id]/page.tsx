@@ -1,6 +1,8 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { repository, ingredientSlug } from '@/lib/data';
+import { localProductImage } from '@/lib/product-images';
 import { RaterSpread } from '@/components/RaterSpread';
 import { CompositeRange } from '@/components/CompositeRange';
 import { WeightControls } from '@/components/WeightControls';
@@ -36,6 +38,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const { product, brand, pillars, sources } = view;
   const flags = await repository.listIngredientFlags(product.id);
   const alternatives = await repository.listAlternatives(product.id);
+  const imageUrl = localProductImage(product.id);
 
   return (
     <main className="relative mx-auto w-full max-w-6xl px-5 pt-5 pb-4 md:px-8 md:pt-7">
@@ -53,32 +56,47 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
       {/* ─── TITLE BAND ─────────────────────────────────────────────────── */}
       <header
-        className="relative overflow-hidden rounded-card halo-tr anim-rise"
-        style={{
-          background: 'var(--card)',
-          border: '1px solid var(--line)',
-          ['--halo' as string]: 'var(--halo-leaf)',
-        }}
+        className="relative overflow-hidden rounded-card anim-rise"
+        style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
       >
-        <div className="halo-content flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between md:p-6">
-          <div className="flex items-center gap-3.5">
-            <BrandMark name={brand.name} size={46} accent="var(--accent-deep)" />
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-3">
-                {brand.name}
-              </p>
-              <h1 className="font-display text-[24px] font-semibold leading-tight text-ink md:text-[30px]">
-                {product.displayName}
-              </h1>
+        <div className="flex min-h-[130px]">
+          {/* Product photo — shown when a local image exists */}
+          {imageUrl && (
+            <div
+              className="relative hidden w-[150px] shrink-0 sm:block"
+              style={{ borderRight: '1px solid var(--line)' }}
+            >
+              <Image
+                src={imageUrl}
+                alt={product.displayName}
+                fill
+                sizes="150px"
+                style={{ objectFit: 'cover' }}
+                priority
+              />
             </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Meta>{product.category}</Meta>
-            <Meta>
-              {product.sizeValue}
-              {product.sizeUnit}
-            </Meta>
-            {product.gtin && <Meta>GTIN {product.gtin}</Meta>}
+          )}
+
+          {/* Info column */}
+          <div className="flex flex-1 flex-col justify-between gap-3 p-5 md:p-6">
+            <div className="flex items-start gap-3.5">
+              {!imageUrl && <BrandMark name={brand.name} size={46} accent="var(--accent-deep)" />}
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-3">
+                  {brand.name}
+                </p>
+                <h1 className="font-display text-[24px] font-semibold leading-tight text-ink md:text-[30px]">
+                  {product.displayName}
+                </h1>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Meta>{product.category}</Meta>
+              {product.sizeValue && (
+                <Meta>{product.sizeValue}{product.sizeUnit}</Meta>
+              )}
+              {product.gtin && <Meta>GTIN {product.gtin}</Meta>}
+            </div>
           </div>
         </div>
       </header>
@@ -89,14 +107,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
         <aside className="lg:order-2 lg:sticky lg:top-[88px]">
           <div className="space-y-4 anim-rise" style={{ animationDelay: '80ms' }}>
             <div
-              className="relative overflow-hidden rounded-card halo-br"
-              style={{
-                background: 'var(--card)',
-                border: '1px solid var(--line)',
-                ['--halo' as string]: 'var(--halo-leaf)',
-              }}
+              className="rounded-card"
+              style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
             >
-              <div className="halo-content p-4">
+              <div className="p-4">
                 <p className="mb-1 text-center text-[10px] font-bold uppercase tracking-[0.22em] text-ink-3">
                   Your composite
                 </p>
@@ -141,10 +155,18 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
             {/* Sonion reads the verdict and reacts to weight changes. */}
             <div
-              className="relative flex items-center gap-3 overflow-hidden rounded-card p-3.5"
+              className="flex items-end justify-between gap-3 overflow-hidden rounded-card p-3.5"
               style={{ background: 'var(--card-2)', border: '1px solid var(--line)' }}
             >
-              <SonionReactive pillars={pillars} size={64} halo />
+              <div className="pb-1">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.20em] text-ink-3">
+                  Sonion
+                </p>
+                <p className="mt-1 max-w-[120px] text-[11.5px] leading-snug text-ink-2">
+                  Slide a weight and he'll comment honestly.
+                </p>
+              </div>
+              <SonionReactive pillars={pillars} size={72} />
             </div>
           </div>
         </aside>
