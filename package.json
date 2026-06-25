@@ -30,6 +30,8 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@types/aws4": "^1.11.6",
+    "aws4": "^1.13.2",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

@@ -37,16 +37,13 @@ export default async function HomePage({ searchParams }: HomeProps) {
     <main className="relative pb-4">
       <div className="mx-auto w-full max-w-6xl px-5 md:px-8">
       {/* ─── HERO ───────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden rounded-card halo-tr anim-rise mt-6"
-        style={{
-          background: 'var(--card)',
-          border: '1px solid var(--line)',
-          ['--halo' as string]: 'var(--halo-leaf)',
-        }}
+      <section
+        className="relative mt-6 overflow-hidden rounded-card anim-rise"
+        style={{ background: 'var(--card)', border: '1px solid var(--line)' }}
       >
-        <div className="halo-content grid gap-5 p-5 md:grid-cols-[1.5fr_1fr] md:items-center md:p-7">
+        <div className="grid gap-5 p-5 md:grid-cols-[1.5fr_1fr] md:items-center md:p-7">
           {/* Left: the pitch */}
-          <div className="relative">
+          <div>
             <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-ink-3">
               <span className="h-px w-6" style={{ background: 'var(--accent-deep)' }} />
               the catalog
@@ -157,10 +154,10 @@ export default async function HomePage({ searchParams }: HomeProps) {
           </div>
 
           {results.length === 0 ? (
-            <div className="relative overflow-hidden rounded-card bg-card px-5 py-7 text-sm text-ink-2 shadow-card halo-tr"
-                 style={{ border: '1px solid var(--line)', ['--halo' as string]: 'var(--halo-amber)' }}>
-              <p className="halo-content font-display italic">Nothing matched yet.</p>
-              <p className="halo-content mt-1 text-[12px]">
+            <div className="rounded-card bg-card px-5 py-7 text-sm text-ink-2"
+                 style={{ border: '1px solid var(--line)' }}>
+              <p className="font-display italic">Nothing matched yet.</p>
+              <p className="mt-1 text-[12px]">
                 The catalog is small until Open Beauty Facts ingestion lands.
               </p>
             </div>
@@ -245,9 +242,10 @@ function CatalogBrowser({
         </span>
       </div>
 
-      {/* Controls: category chips + sort */}
-      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap gap-1.5">
+      {/* Controls: category chips (scrollable) + sort */}
+      <div className="mb-5 flex flex-col gap-3">
+        {/* Category strip — single scrollable row, no wrapping */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
           <FacetChip href={catHref('all')} active={category === 'all'}>All</FacetChip>
           {categories.map((c) => (
             <FacetChip key={c} href={catHref(c)} active={category === c}>
@@ -255,8 +253,9 @@ function CatalogBrowser({
             </FacetChip>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-ink-3">Sort</span>
+        {/* Sort row */}
+        <div className="flex items-center gap-1.5">
+          <span className="shrink-0 text-[9.5px] font-semibold uppercase tracking-[0.18em] text-ink-3">Sort</span>
           {SORTS.map((s) => (
             <FacetChip key={s.key} href={sortHref(s.key)} active={sort === s.key}>
               {s.label}

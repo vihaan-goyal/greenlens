@@ -17,6 +17,7 @@ import { repository } from '@/lib/data';
 import { resolveItem } from '@/lib/matcher/matcher';
 import type { MatchableItem } from '@/lib/matcher/features';
 import type { VerdictPayload } from '@/extension/shared/messages';
+import { fetchPaapiItem } from '@/lib/amazon-paapi';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,16 @@ interface SightingBody {
   name?: unknown;
   gtin?: unknown;
   ingredients?: unknown;
+  /** When the extension has a curated ASIN→product mapping, skip fuzzy matching. */
+  directProductId?: unknown;
+  /**
+   * ASIN from the Amazon URL. When present and PA-API credentials are
+   * configured, the server enriches the sighting with canonical PA-API data
+   * (authoritative title, brand, GTIN) before running the fuzzy matcher.
+   * This is more reliable than DOM-scraped names, which drift as Amazon
+   * renames listings.
+   */
+  asin?: unknown;
 }
 
 const asString = (v: unknown): string | undefined =>
@@ -69,7 +80,48 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid json' }, { status: 400, headers: CORS });
   }
 
-  const name = asString(body.name);
+  // Fast path: extension sent a curated ASIN→product mapping — skip fuzzy matching.
+  const directId = asString(body.directProductId);
+  if (directId) {
+    const view = await repository.getProduct(directId);
+    if (view) {
+      const flags = await repository.listIngredientFlags(directId);
+      const alternatives = await repository.listAlternatives(directId);
+      const payload: VerdictPayload = {
+        product: view.product,
+        brand: view.brand,
+        pillars: view.pillars,
+        sources: view.sources,
+        flags,
+        topAlternative: alternatives[0],
+        matchConfidence: 1.0,
+        ambiguous: false,
+      };
+      return NextResponse.json({ match: payload }, { headers: CORS });
+    }
+    // directProductId not found in catalog — fall through to PA-API / fuzzy match.
+  }
+
+  // PA-API enrichment: if the extension sent an ASIN and we have credentials,
+  // fetch the canonical product data from Amazon. This gives us the authoritative
+  // title, brand, and GTIN — much more reliable than DOM-scraped names for
+  // fuzzy matching. Falls back to scraping-based fields on any failure.
+  const asin = asString(body.asin);
+  let scrapedName = asString(body.name);
+  let scrapedBrand = asString(body.brand);
+  let scrapedGtin = asString(body.gtin);
+
+  if (asin) {
+    const paapi = await fetchPaapiItem(asin);
+    if (paapi) {
+      // Prefer canonical PA-API data; fall back to scraped fields if absent.
+      scrapedName = paapi.title || scrapedName;
+      scrapedBrand = paapi.brand ?? scrapedBrand;
+      scrapedGtin = paapi.gtin ?? scrapedGtin;
+    }
+  }
+
+  const name = scrapedName;
   if (!name) {
     // No name → nothing to match on. Return a definitive "no match" (200) so the
     // extension shows "not yet rated" rather than treating it as a server error.
@@ -82,9 +134,9 @@ export async function POST(req: Request) {
 
   const item: MatchableItem = {
     id: 'sighting',
-    brand: asString(body.brand),
+    brand: scrapedBrand,
     name,
-    gtin: asString(body.gtin),
+    gtin: scrapedGtin,
     ingredients: ingredients && ingredients.length ? ingredients : undefined,
   };
 

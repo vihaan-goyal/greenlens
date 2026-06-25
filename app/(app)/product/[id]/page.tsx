@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { repository, ingredientSlug } from '@/lib/data';
 import { localProductImage } from '@/lib/product-images';
+import { productAmazonUrl } from '@/lib/product-amazon';
 import { RaterSpread } from '@/components/RaterSpread';
 import { CompositeRange } from '@/components/CompositeRange';
 import { WeightControls } from '@/components/WeightControls';
@@ -39,6 +40,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const flags = await repository.listIngredientFlags(product.id);
   const alternatives = await repository.listAlternatives(product.id);
   const imageUrl = localProductImage(product.id);
+  const amazonUrl = productAmazonUrl(product.id);
 
   return (
     <main className="relative mx-auto w-full max-w-6xl px-5 pt-5 pb-4 md:px-8 md:pt-7">
@@ -85,9 +87,23 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-3">
                   {brand.name}
                 </p>
-                <h1 className="font-display text-[24px] font-semibold leading-tight text-ink md:text-[30px]">
-                  {product.displayName}
-                </h1>
+                {amazonUrl ? (
+                  <a
+                    href={amazonUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group inline-flex items-baseline gap-2"
+                  >
+                    <h1 className="font-display text-[24px] font-semibold leading-tight text-ink underline decoration-dotted underline-offset-4 decoration-[var(--line)] group-hover:decoration-[var(--ink-3)] md:text-[30px]">
+                      {product.displayName}
+                    </h1>
+                    <span className="shrink-0 text-[12px] font-semibold text-ink-3 group-hover:text-ink-2">↗</span>
+                  </a>
+                ) : (
+                  <h1 className="font-display text-[24px] font-semibold leading-tight text-ink md:text-[30px]">
+                    {product.displayName}
+                  </h1>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">

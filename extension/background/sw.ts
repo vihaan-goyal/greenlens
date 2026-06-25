@@ -8,6 +8,7 @@ import type { ProductView } from '@/lib/data/repository';
 import { resolveItem, type CatalogEntry } from '@/lib/matcher/matcher';
 import type { MatchableItem } from '@/lib/matcher/features';
 import { API_BASE_KEY, normalizeApiBase } from '../shared/api';
+import { asinToProductId } from '@/lib/product-amazon';
 
 console.log('[greenlens/sw] build', __GL_BUILD__);
 
@@ -77,6 +78,8 @@ const API_TIMEOUT_MS = 4000;
 
 async function resolveViaApi(
   s: RawProductSighting,
+  directProductId?: string,
+  asin?: string,
 ): Promise<VerdictPayload | null | undefined> {
   // Hard timeout: if the server is down, slow, or blocked (e.g. mid-ingest), we
   // must NOT hang the worker — abort and fall back to the bundled seed so Sonion
@@ -92,6 +95,12 @@ async function resolveViaApi(
         name: s.rawName,
         gtin: s.rawGtin,
         ingredients: s.rawIngredients,
+        // Pass the ASIN so the server can enrich with canonical PA-API data
+        // before fuzzy matching (authoritative title/brand/GTIN vs DOM scrape).
+        ...(asin ? { asin } : {}),
+        // When we have a curated ASIN→product mapping, send it so the server
+        // can bypass fuzzy matching and return an exact result.
+        ...(directProductId ? { directProductId } : {}),
       }),
       signal: controller.signal,
     });
@@ -106,14 +115,55 @@ async function resolveViaApi(
   }
 }
 
+const AMAZON_ASIN_RE = /\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i;
+
+function asinFromUrl(url: string): string | null {
+  const m = url.match(AMAZON_ASIN_RE);
+  return m ? m[1]!.toUpperCase() : null;
+}
+
 /**
  * Resolve a sighting: try the live full-catalog API first, fall back to the
  * bundled seed only when the server is unreachable.
+ *
+ * For Amazon URLs we check the ASIN against our curated map first. Product
+ * titles on Amazon drift over time (rebranding, A/B copy), so fuzzy name
+ * matching can silently fail for products we know are in the catalog.
  */
 async function resolveSighting(s: RawProductSighting): Promise<VerdictPayload | null> {
+  const asin = asinFromUrl(s.url);
+  if (asin) {
+    const productId = asinToProductId(asin);
+    if (productId) {
+      // Curated ASIN: bypass fuzzy matching entirely.
+      const viaApi = await resolveViaApi(s, productId, asin);
+      if (viaApi !== undefined) return viaApi;
+      return resolveViaMockById(productId);
+    }
+    // Unknown ASIN: pass it to the server so it can enrich with PA-API data
+    // before fuzzy matching (canonical title/brand/GTIN beats DOM scraping).
+    const viaApi = await resolveViaApi(s, undefined, asin);
+    if (viaApi !== undefined) return viaApi;
+    return resolveViaMock(s);
+  }
   const viaApi = await resolveViaApi(s);
   if (viaApi !== undefined) return viaApi;
   return resolveViaMock(s);
+}
+
+/** Offline shortcut: fetch a specific product from the mock by ID (no fuzzy match). */
+async function resolveViaMockById(productId: string): Promise<VerdictPayload | null> {
+  const view = await mockRepository.getProduct(productId);
+  if (!view) return null;
+  const flags = await mockRepository.listIngredientFlags(productId);
+  return {
+    product: view.product,
+    brand: view.brand,
+    pillars: view.pillars,
+    sources: view.sources,
+    flags,
+    matchConfidence: 1.0,
+  };
 }
 
 /**
